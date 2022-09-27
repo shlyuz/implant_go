@@ -2,7 +2,7 @@ package symmetric
 
 import (
 	"bytes"
-	"math/rand"
+	rand "crypto/rand"
 
 	"shlyuz/pkg/crypto/rc6"
 )
