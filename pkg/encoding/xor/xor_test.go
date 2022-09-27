@@ -10,6 +10,30 @@ var breakingBytesTest = []struct {
 	message []byte
 }{
 	{
+		[]byte("sub 16 len str"),
+	},
+	{
+		[]byte("16 len str xxxxx"),
+	},
+	{
+		[]byte("Sub 32 len string, but > 16"),
+	},
+	{
+		[]byte("32 length string is placed here."),
+	},
+	{
+		[]byte("string len >32 but also less than 48"),
+	},
+	{
+		[]byte("string len >48, and is also mod % 4, so no padding"),
+	},
+	{
+		[]byte("okay this string should be split up into exactly 4 chunks no pad"),
+	},
+	{
+		[]byte("Finally this is going to be a very long string over 64 bytes in length, with padding."),
+	},
+	{
 		// Nop Sled
 		[]byte{144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144},
 	},
