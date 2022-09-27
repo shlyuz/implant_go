@@ -1,7 +1,7 @@
 package instructions
 
 import (
-	idgenerator "shlyuz/pkg/utils/idgen"
+	"shlyuz/pkg/utils/idgen"
 	"shlyuz/pkg/utils/uname"
 	"time"
 )
@@ -33,7 +33,7 @@ func CreateInstructionFrame(DataFrame Transaction) *InstructionFrame {
 	if DataFrame.TxId != "" {
 		IFrame.TxId = DataFrame.TxId
 	} else {
-		IFrame.TxId = idgenerator.GenerateId()
+		IFrame.TxId = idgen.GenerateId()
 	}
 	IFrame.Uname = *uname.GetUname()
 	return IFrame

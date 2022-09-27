@@ -1,4 +1,4 @@
-package idgenerator
+package idgen
 
 import (
 	"github.com/google/uuid"
