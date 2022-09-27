@@ -2,7 +2,6 @@ package asymmetric
 
 import (
 	"crypto/rand"
-	"io"
 	"log"
 
 	"golang.org/x/crypto/nacl/box"
@@ -15,9 +14,12 @@ type PrivateKey = *[32]byte
 
 func generateNonce() Nonce {
 	var nonce Nonce
-	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
+	randomNonce := make([]byte, 24)
+	_, err := rand.Read(randomNonce)
+	if err != nil {
 		log.Panicln("Failed to generate nonce ", err)
 	}
+	nonce = (*[24]byte)(randomNonce)
 	return nonce
 }
 

@@ -1,6 +1,9 @@
 package asymmetric
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
 type KeyPair struct {
 	PublicKey  *[32]byte
@@ -64,7 +67,16 @@ func TestAsymmetricNaclEncryptionAndDecryption(t *testing.T) {
 		}
 
 		// t.Log("Testing Message from Alice to Bob")
-		AliceEncryptedMessage := Encrypt(secretMessage)
+		AliceEncryptedMessage := Encrypt(secretMessage, BobKeyPair.PublicKey, AliceKeyPair.PrivateKey)
+		if bytes.Equal(AliceEncryptedMessage, secretMessage) {
+			t.Log("[FAIL] Alice Message encryption failed")
+			t.Error("Testcase: ", testcase.message)
+		}
 
+		BobEncryptedMessage := Encrypt(secretMessage, AliceKeyPair.PublicKey, BobKeyPair.PrivateKey)
+		if bytes.Equal(BobEncryptedMessage, secretMessage) {
+			t.Log("[FAIL] Bob message encryption failed")
+			t.Error("Testcase: ", testcase.message)
+		}
 	}
 }
