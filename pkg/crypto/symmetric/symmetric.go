@@ -60,8 +60,10 @@ func Encrypt(plaintext []byte) SymmetricMessage {
 
 	if (len(plaintext) < 16) || (len(plaintext)%4 != 0) {
 		paddedPlaintext = pad(plaintext)
+		// copy(paddedPlaintext, pad(plaintext))
 	} else {
 		paddedPlaintext = plaintext
+		// copy(paddedPlaintext, plaintext)
 	}
 
 	EncryptedMessage.Key = generateKey()
@@ -72,17 +74,18 @@ func Encrypt(plaintext []byte) SymmetricMessage {
 	//   APPEND to EncryptedMessage.Message since this library won't loop for you. Loop across every 16 bytes of paddedPlaintext (paddedChunk)
 	for i := 0; i < len(paddedPlaintext); i = i + 16 {
 		j := 0
-		if i > len(paddedPlaintext) {
-			j = i - len(paddedPlaintext)
-		}
 		if (len(paddedPlaintext) != 16 || len(paddedPlaintext) > 16) && i > len(paddedPlaintext) {
 			j = i + 16
 			paddedChunk = paddedPlaintext[i-16 : j+(len(paddedPlaintext)-i)]
+			cipher.Encrypt(paddedChunk, paddedPlaintext[i:j])
+		} else if i+16 > len(paddedPlaintext) {
+			paddedChunk = pad(paddedPlaintext[i:])
+			cipher.Encrypt(paddedChunk, paddedChunk)
 		} else {
 			j = i + 16
 			paddedChunk = paddedPlaintext[i:j]
+			cipher.Encrypt(paddedChunk, paddedPlaintext[i:j])
 		}
-		cipher.Encrypt(paddedChunk, paddedPlaintext[i:j])
 		EncryptedMessage.Message = append(EncryptedMessage.Message[:], paddedChunk[:]...)
 	}
 	EncryptedMessage.IsEncrypted = true

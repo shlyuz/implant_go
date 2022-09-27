@@ -56,9 +56,6 @@ func TestSymmetricRc6EncryptionAndDecryption(t *testing.T) {
 	for _, testcase := range tests {
 		EncryptionTestMessageBytes := make([]byte, len(testcase.message))
 		copy(EncryptionTestMessageBytes, testcase.message)
-		if (len(testcase.message) < 16) || (len(testcase.message)%4 != 0) {
-			t.Log("this is true")
-		}
 		if !bytes.Equal(EncryptionTestMessageBytes, testcase.message) {
 			t.Log("Setting the plaintext message failed")
 			t.Errorf("%s != %s", EncryptionTestMessageBytes, testcase.message)
@@ -87,6 +84,5 @@ func TestSymmetricRc6EncryptionAndDecryption(t *testing.T) {
 		} else {
 			t.Log("[PASS] Decryption for Testcase: ", string(testcase.message))
 		}
-
 	}
 }
