@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"math/rand"
 
-	rc6 "github.com/CampNowhere/golang-rc6"
+	"shlyuz/pkg/crypto/rc6"
 )
 
 type SymmetricMessage struct {
