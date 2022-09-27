@@ -1,3 +1,5 @@
+github.com/CampNowhere/golang-rc6 v0.0.0-20171020213708-7e963904073b h1:X1dNGSzXrGexSldRX+DB9Khu9r7JLsz0QpH6YlA29jY=
+github.com/CampNowhere/golang-rc6 v0.0.0-20171020213708-7e963904073b/go.mod h1:mds5z9u8NoJU6Xr6ch28rqTtzplZ57+mFG2wepbTjNc=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 h1:7I4JAnoQBe7ZtJcBaYHi5UtiO8tQHbUSXxL+pnGRANg=
