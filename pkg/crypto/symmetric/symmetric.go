@@ -74,14 +74,12 @@ func Encrypt(plaintext []byte) SymmetricMessage {
 		j := 0
 		if i > len(paddedPlaintext) {
 			j = i - len(paddedPlaintext)
-		} else {
-			j = 0
 		}
 		if (len(paddedPlaintext) != 16 || len(paddedPlaintext) > 16) && i > len(paddedPlaintext) {
-			j = j + 16
+			j = i + 16
 			paddedChunk = paddedPlaintext[i-16 : j+(len(paddedPlaintext)-i)]
 		} else {
-			j = j + 16
+			j = i + 16
 			paddedChunk = paddedPlaintext[i:j]
 		}
 		cipher.Encrypt(paddedChunk, paddedPlaintext[i:j])
