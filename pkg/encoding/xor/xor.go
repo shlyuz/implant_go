@@ -1,8 +1,10 @@
 package xor
 
 func XorMessage(message []byte, key int) []byte {
-	for i := 0; i < len(message); i += 1 {
-		message[i] = message[i] ^ byte(key)
+	encodedMessage := make([]byte, len(message))
+	copy(encodedMessage, message)
+	for i := 0; i < len(encodedMessage); i += 1 {
+		encodedMessage[i] = encodedMessage[i] ^ byte(key)
 	}
-	return message
+	return encodedMessage
 }
