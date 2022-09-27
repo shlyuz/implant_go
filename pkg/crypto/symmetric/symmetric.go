@@ -19,12 +19,11 @@ func generateKey() []byte {
 	return key
 }
 
-// pad a message
+// Add padding to a given message
 //
 //	See: https://github.com/go-web/tokenizer/blob/master/pkcs7.go
 //	This assumes the message is perfect. It will trigger a crash if it recieves invalid data
 func pad(message []byte) []byte {
-	// TODO: Handle invalid data here
 	n := 16 - (len(message) % 16)
 	paddedBytes := make([]byte, len(message)+n)
 	copy(paddedBytes, message)
@@ -41,12 +40,6 @@ func unpad(message []byte) []byte {
 	if x == 0 || x > 16 {
 		return message
 	}
-	// for i := 0; i < x; i++ {
-	// 	if message[len(message)-x+i] != size {
-	// 		return message
-	// 	}
-	// }
-	// TODO: handle invalid padding here
 	return message[:len(message)-x]
 }
 
@@ -101,7 +94,12 @@ func Decrypt(encryptedText []byte, decryptionKey []byte) SymmetricMessage {
 	var unpaddedText []byte
 	var unpaddedChunk []byte
 
-	// TODO: We should REALLY check if `!(len(decryptionKey) % 4) != 0` here, and safely handle that before continuing.
+	if len(decryptionKey) != 16 {
+		DecryptedMessage.Key = decryptionKey
+		DecryptedMessage.Message = encryptedText
+		DecryptedMessage.IsEncrypted = true
+		return DecryptedMessage
+	}
 	DecryptedMessage.Key = decryptionKey
 	cipher := rc6.NewCipher(decryptionKey)
 
@@ -118,9 +116,6 @@ func Decrypt(encryptedText []byte, decryptionKey []byte) SymmetricMessage {
 		cipher.Decrypt(unpaddedChunk, unpaddedText[i:j])
 		DecryptedMessage.Message = append(DecryptedMessage.Message[:], unpaddedChunk[:]...)
 	}
-	// if (len(DecryptedMessage.Message) < 16) || (len(DecryptedMessage.Message)%4 != 0) {
-	// 	DecryptedMessage.Message = unpad(DecryptedMessage.Message)
-	// }
 	//   APPEND to DecryptedMessage.Message since this library won't loop for you. You need to loop across every 16 bytes of plaintext
 	DecryptedMessage.Message = unpad(DecryptedMessage.Message)
 	DecryptedMessage.IsEncrypted = false
