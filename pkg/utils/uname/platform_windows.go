@@ -12,6 +12,7 @@ type OsVer {
 	CurrentBuild int
 }
 
+// Contains information about the platform Shlyuz is running on
 type PlatformInfo {
 	OS string
 	OsVer OsVer

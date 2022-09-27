@@ -43,9 +43,9 @@ func unpad(message []byte) []byte {
 	return message[:len(message)-x]
 }
 
-// Encrypts a message, given a plaintext
+// Encrypts a message, given a plaintext. Returns a SymmetricMessage. Caller should check to see if Key is populated
 //
-//	Returns a SymmetricMessage. Caller should check to see if Key is populat
+// @param plaintext: A plaintext byte array with the message to be encrypted
 func Encrypt(plaintext []byte) SymmetricMessage {
 	var EncryptedMessage SymmetricMessage
 	var paddedPlaintext []byte
@@ -86,9 +86,10 @@ func Encrypt(plaintext []byte) SymmetricMessage {
 	return EncryptedMessage
 }
 
-// Decrypts a message, given an encrypted text and a decryption key
+// Decrypts a message, given an encrypted text and a decryption key. Returns a SymmetricMessage on error or success. SymmetricMessage.IsEncrypted will be true upong failure.
 //
-//	Returns a SymmetricMessage
+// @param encryptedText: A [][byte of RC6 encrypted text to decrypt
+// @param decryptionKey: A [16]byte key to be used for decryption
 func Decrypt(encryptedText []byte, decryptionKey []byte) SymmetricMessage {
 	var DecryptedMessage SymmetricMessage
 	var unpaddedText []byte

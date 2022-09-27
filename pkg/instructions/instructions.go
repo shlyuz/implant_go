@@ -22,9 +22,9 @@ type InstructionFrame struct {
 	Uname       uname.PlatformInfo
 }
 
-// Get the platform name
-
 // Create an instruction frame from a passed data frame
+//
+// @param DataFrame: A dataframe to create an instruction from
 func CreateInstructionFrame(DataFrame Transaction) *InstructionFrame {
 	IFrame := new(InstructionFrame)
 	IFrame.ComponentId = DataFrame.ComponentId

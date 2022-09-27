@@ -13,6 +13,7 @@ type Uname struct {
 	Domainname string
 }
 
+// Contains information about the platform Shlyuz is running on
 type PlatformInfo struct {
 	Uname Uname
 }

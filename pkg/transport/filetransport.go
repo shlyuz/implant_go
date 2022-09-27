@@ -9,6 +9,7 @@ type TransportInfo struct {
 	Description string
 	Version     string
 }
-type TransportComponent struct {
-	Info TransportInfo
+
+type Transport interface {
+	Info() TransportInfo
 }

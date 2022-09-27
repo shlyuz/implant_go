@@ -43,6 +43,11 @@ func Decrypt(encBox AsymmetricBox, peersPublicKey PublicKey, privateKey PrivateK
 	return output, boolSuccess
 }
 
+// Retruns the encrypted output from an Aymmetric box
+//
+// @param message: A byte array, but initalized as an AsymmetricBox
+// @param peersPublicKey: A pointer to the PublicKey we open the box with
+// @param privateKey: A Pointer to the PrivateKey we open the box with
 func Encrypt(message AsymmetricBox, peersPublicKey PublicKey, privateKey PrivateKey) AsymmetricBox {
 	nonce := generateNonce()
 	var output []byte

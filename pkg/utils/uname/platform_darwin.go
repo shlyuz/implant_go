@@ -12,6 +12,7 @@ type Uname struct {
 	Machine  string
 }
 
+// Contains information about the platform Shlyuz is running on
 type PlatformInfo struct {
 	Uname Uname
 }
@@ -51,6 +52,7 @@ func platinfo() Uname {
 	return *platUname
 }
 
+// Returns operating system version information
 func GetUname() *PlatformInfo {
 	uname := new(PlatformInfo)
 	uname.Uname = platinfo()
