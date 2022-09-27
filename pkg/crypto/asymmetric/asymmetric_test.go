@@ -50,7 +50,7 @@ func TestAsymmetricNaclEncryptionAndDecryption(t *testing.T) {
 	for _, testcase := range breakingBytesTest {
 		var err error
 		var secretMessage AsymmetricBox
-		secretMessage = testcase.message
+		secretMessage.message = testcase.message
 
 		AliceKeyPair := new(KeyPair)
 		AliceKeyPair.PublicKey, AliceKeyPair.PrivateKey, err = GenerateKeypair()
@@ -67,16 +67,29 @@ func TestAsymmetricNaclEncryptionAndDecryption(t *testing.T) {
 		}
 
 		// t.Log("Testing Message from Alice to Bob")
-		AliceEncryptedMessage := Encrypt(secretMessage, BobKeyPair.PublicKey, AliceKeyPair.PrivateKey)
-		if bytes.Equal(AliceEncryptedMessage, secretMessage) {
+		AliceEncryptedBox := Encrypt(secretMessage.message, BobKeyPair.PublicKey, AliceKeyPair.PrivateKey)
+		if bytes.Equal(AliceEncryptedBox.message, testcase.message) {
 			t.Log("[FAIL] Alice Message encryption failed")
 			t.Error("Testcase: ", testcase.message)
 		}
 
-		BobEncryptedMessage := Encrypt(secretMessage, AliceKeyPair.PublicKey, BobKeyPair.PrivateKey)
-		if bytes.Equal(BobEncryptedMessage, secretMessage) {
+		BobEncryptedBox := Encrypt(secretMessage.message, AliceKeyPair.PublicKey, BobKeyPair.PrivateKey)
+		if bytes.Equal(BobEncryptedBox.message, testcase.message) {
 			t.Log("[FAIL] Bob message encryption failed")
 			t.Error("Testcase: ", testcase.message)
 		}
+
+		AliceDecryptedMessage, decryptionSuccess := Decrypt(*AliceEncryptedBox, AliceKeyPair.PublicKey, BobKeyPair.PrivateKey)
+		if !(decryptionSuccess) || !bytes.Equal(AliceDecryptedMessage.message, testcase.message) {
+			t.Log("[FAIL] Bob failed to decrypt Alice's message")
+			t.Error("Testcase: ", testcase.message)
+		}
+
+		BobDecryptedMessage, decryptionSuccess := Decrypt(*BobEncryptedBox, BobKeyPair.PublicKey, AliceKeyPair.PrivateKey)
+		if !(decryptionSuccess) || !bytes.Equal(BobDecryptedMessage.message, testcase.message) {
+			t.Log("[FAIL] Bob failed to decrypt Bob's message")
+			t.Error("Testcase: ", testcase.message)
+		}
+		t.Log("[PASS]")
 	}
 }
