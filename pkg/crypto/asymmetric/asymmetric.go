@@ -14,6 +14,11 @@ type AsymmetricBox struct {
 	IV      Nonce
 }
 
+type AsymmetricKeyPair struct {
+	PubKey  PublicKey
+	PrivKey PrivateKey
+}
+
 type PublicKey = *[32]byte
 type PrivateKey = *[32]byte
 
@@ -29,14 +34,16 @@ func generateNonce() Nonce {
 }
 
 // Generates a nacl box keypair
-func GenerateKeypair() (PublicKey, PrivateKey, error) {
-	var PubKey PublicKey
-	var PrivKey PrivateKey
-	PubKey, PrivKey, err := box.GenerateKey(rand.Reader)
+func GenerateKeypair() (AsymmetricKeyPair, error) {
+	var keyPair AsymmetricKeyPair
+
+	pubKey, privKey, err := box.GenerateKey(rand.Reader)
+	keyPair.PubKey = pubKey
+	keyPair.PrivKey = privKey
 	if err != nil {
 		log.Println("Failed to generate keypair: ", err)
 	}
-	return PubKey, PrivKey, err
+	return keyPair, err
 }
 
 // Returns an Asymmetric box with the decrypted contents
@@ -50,6 +57,7 @@ func Decrypt(encBox AsymmetricBox, peersPublicKey PublicKey, privateKey PrivateK
 	output, boolSuccess := box.Open(output, encBox.Message, encBox.IV, peersPublicKey, privateKey)
 	if !boolSuccess {
 		log.Println("Failed to open secret box, received: ", boolSuccess)
+		return &encBox, boolSuccess
 	}
 	decryptedBox.IV = encBox.IV
 	decryptedBox.Message = output
