@@ -79,3 +79,26 @@ func PrepareTransmitFrame(dataFrame DataFrame, lpPubKey asymmetric.PublicKey) []
 	// TODO: prepend the init_signature to encBox.Message and return that
 	return encBox.Message
 }
+
+func UnwrapTransmitFrame(transmitFrame []byte, lpPubKey asymmetric.PublicKey) []byte {
+	decryptionBox := new(asymmetric.AsymmetricBox)
+	decryptionBox.Message = transmitFrame
+	// TODO: Get the implant's current private key
+	decBox, boolAsymSuccess := asymmetric.Decrypt(*decryptionBox, lpPubKey, ImpPrivKey)
+	if boolAsymSuccess != true {
+		log.Println("invalid transmit frame")
+	}
+	symKey := make([]byte, hex.DecodedLen(len(decBox.Message[0:44])))
+	rawSymKey := decBox.Message[0:44]
+	hex.Decode(symKey, rawSymKey)
+
+	unxorFrame := xor.XorMessage(decBox.Message, XORKEY)
+	uncFrame := shlyuzHex.Decode(unxorFrame)
+
+	hexFrame := uncFrame[44:]
+	recvMsg := symmetric.Decrypt(hexFrame, symKey)
+	if recvMsg.IsEncrypted != true {
+		log.Println("unable to extract raw message from transmit frame")
+	}
+	return recvMsg.Message
+}
