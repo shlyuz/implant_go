@@ -10,6 +10,7 @@ import (
 	"shlyuz/pkg/crypto/symmetric"
 	shlyuzHex "shlyuz/pkg/encoding/hex"
 	"shlyuz/pkg/encoding/xor"
+	"shlyuz/pkg/utils/logging"
 )
 
 // TODO: This is read from a config
@@ -24,6 +25,7 @@ type EncryptedFrame struct {
 // TODO: Get INIT Signature
 
 func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey) ([]byte, asymmetric.AsymmetricKeyPair) {
+	log.SetPrefix(logging.GetLogPrefix())
 	symMsg := symmetric.Encrypt(dataFrame)
 
 	var encryptedSymMsg bytes.Buffer
@@ -88,7 +90,7 @@ func UnwrapTransmitFrame(transmitFrame []byte, peerPubKey asymmetric.PublicKey, 
 
 	dataFrame := chunks.Data
 	recvMsg := symmetric.Decrypt(dataFrame, symKey)
-	if !recvMsg.IsEncrypted {
+	if recvMsg.IsEncrypted {
 		log.Println("unable to extract raw message from transmit frame")
 	}
 	return recvMsg.Message

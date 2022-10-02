@@ -2,6 +2,7 @@ package uname
 
 import (
 	"golang.org/x/sys/windows/registry"
+	"shlyuz/pkg/utils/logging"
 )
 
 type OsVer {
@@ -22,6 +23,7 @@ type PlatformInfo {
 
 // Reads the windows registry to collection system version information
 func getOsVer() string {
+	log.SetPrefix(logging.GetLogPrefix())
 	// Adapted from: https://stackoverflow.com/a/44376544
 	version := new(OsVer)
     k, err = registry.OpenKey(registry.LocalMachine, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)

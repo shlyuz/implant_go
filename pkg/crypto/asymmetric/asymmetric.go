@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"golang.org/x/crypto/nacl/box"
+	"shlyuz/pkg/utils/logging"
 )
 
 type Nonce = *[24]byte
@@ -23,6 +24,7 @@ type PublicKey = *[32]byte
 type PrivateKey = *[32]byte
 
 func generateNonce() Nonce {
+	log.SetPrefix(logging.GetLogPrefix())
 	var nonce Nonce
 	randomNonce := make([]byte, 24)
 	_, err := rand.Read(randomNonce)
@@ -35,6 +37,7 @@ func generateNonce() Nonce {
 
 // Generates a nacl box keypair
 func GenerateKeypair() (AsymmetricKeyPair, error) {
+	log.SetPrefix(logging.GetLogPrefix())
 	var keyPair AsymmetricKeyPair
 
 	pubKey, privKey, err := box.GenerateKey(rand.Reader)
@@ -52,6 +55,7 @@ func GenerateKeypair() (AsymmetricKeyPair, error) {
 // @param peersPublicKey: A pointer to the PublicKey we open the box with
 // @param privateKey: A pointer to the PrivateKey we open the box with
 func Decrypt(encBox AsymmetricBox, peersPublicKey PublicKey, privateKey PrivateKey) (*AsymmetricBox, bool) {
+	log.SetPrefix(logging.GetLogPrefix())
 	var output []byte
 	decryptedBox := new(AsymmetricBox)
 	output, boolSuccess := box.Open(output, encBox.Message, encBox.IV, peersPublicKey, privateKey)
