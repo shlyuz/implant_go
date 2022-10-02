@@ -8,10 +8,12 @@ import (
 )
 
 type Nonce = *[24]byte
+
 type AsymmetricBox struct {
-	message []byte
-	iv      Nonce
+	Message []byte
+	IV      Nonce
 }
+
 type PublicKey = *[32]byte
 type PrivateKey = *[32]byte
 
@@ -45,12 +47,12 @@ func GenerateKeypair() (PublicKey, PrivateKey, error) {
 func Decrypt(encBox AsymmetricBox, peersPublicKey PublicKey, privateKey PrivateKey) (*AsymmetricBox, bool) {
 	var output []byte
 	decryptedBox := new(AsymmetricBox)
-	output, boolSuccess := box.Open(output, encBox.message, encBox.iv, peersPublicKey, privateKey)
+	output, boolSuccess := box.Open(output, encBox.Message, encBox.IV, peersPublicKey, privateKey)
 	if !boolSuccess {
 		log.Println("Failed to open secret box, received: ", boolSuccess)
 	}
-	decryptedBox.iv = encBox.iv
-	decryptedBox.message = output
+	decryptedBox.IV = encBox.IV
+	decryptedBox.Message = output
 	return decryptedBox, boolSuccess
 }
 
@@ -59,12 +61,12 @@ func Decrypt(encBox AsymmetricBox, peersPublicKey PublicKey, privateKey PrivateK
 // @param message: A byte array, but initalized as an AsymmetricBox
 // @param peersPublicKey: A pointer to the PublicKey we open the box with
 // @param privateKey: A pointer to the PrivateKey we open the box with
-func Encrypt(message []byte, peersPublicKey PublicKey, privateKey PrivateKey) *AsymmetricBox {
+func Encrypt(message []byte, peersPublicKey PublicKey, privateKey PrivateKey) AsymmetricBox {
 	encryptedBox := new(AsymmetricBox)
 	nonce := generateNonce()
-	encryptedBox.iv = nonce
+	encryptedBox.IV = nonce
 	var output []byte
 	output = box.Seal(output, message, nonce, peersPublicKey, privateKey)
-	encryptedBox.message = output
-	return encryptedBox
+	encryptedBox.Message = output
+	return *encryptedBox
 }
