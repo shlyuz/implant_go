@@ -1,6 +1,7 @@
 package instructions
 
 import (
+	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/utils/idgen"
 	"shlyuz/pkg/utils/uname"
 	"time"
@@ -20,6 +21,18 @@ type InstructionFrame struct {
 	Date        string
 	TxId        string
 	Uname       uname.PlatformInfo
+}
+
+type EventHist struct {
+	Timestamp   string
+	Event       string
+	ComponentId string
+}
+
+type CmdOutput struct {
+	State        string
+	EventHistory EventHist
+	Ipk          asymmetric.PublicKey
 }
 
 // Create an instruction frame from a passed data frame

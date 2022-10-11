@@ -13,8 +13,9 @@ import (
 
 // embeded config
 //
-//go:generate cp -r ../configs/shlyuz.conf ./shlyuz.conf
-//go:generate cp -r ../configs/symkey ./symkey
+//go:generate cp -r ../../configs/shlyuz.conf ./shlyuz.conf
+//go:generate cp -r ../../configs/symkey ./symkey
+//go:generate go build -o zombie ../../internal/zombie.go
 //go:embed *
 var configFs embed.FS
 
@@ -39,6 +40,7 @@ func genComponentInfo() component.Component {
 	componentConfig := config.ReadConfig(rawConfig, YadroComponent.XorKey, symKey)
 	parsedConfig := config.ParseConfig(componentConfig.Message)
 	YadroComponent.Config.Id = parsedConfig.Id
+	YadroComponent.ComponentId = YadroComponent.Config.Id
 	YadroComponent.Config.TransportName = parsedConfig.TransportName
 	YadroComponent.Config.InitSignature = parsedConfig.InitSignature
 	YadroComponent.Config.TskChkTimer = parsedConfig.TskChkTimer
@@ -67,5 +69,4 @@ func Main() {
 	// TODO: Send the actual manifest
 
 	// TODO: Implement loop here to do the actual stuff
-
 }
