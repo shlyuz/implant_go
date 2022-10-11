@@ -9,7 +9,7 @@ import (
 type Transaction struct {
 	ComponentId string
 	Cmd         string
-	Arg         string
+	Arg         []byte
 	TxId        string
 }
 
