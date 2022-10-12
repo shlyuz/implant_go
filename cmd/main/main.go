@@ -1,4 +1,4 @@
-package shlyuz
+package main
 
 import (
 	"embed"
@@ -15,7 +15,7 @@ import (
 //
 //go:generate cp -r ../../configs/shlyuz.conf ./shlyuz.conf
 //go:generate cp -r ../../configs/symkey ./symkey
-//go:generate go build -o zombie ../../internal/zombie.go
+//go:generate go build -o zombie ../../internal/pkg/zombie.go
 //go:embed *
 var configFs embed.FS
 
@@ -65,7 +65,7 @@ func makeManifest(componentId string) component.ComponentManifest {
 	return generatedManifest
 }
 
-func Main() {
+func main() {
 	Component := genComponentInfo()
 	// TODO: Send the actual manifest
 

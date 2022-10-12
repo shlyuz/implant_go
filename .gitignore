@@ -1,1 +1,3 @@
 configs/shlyuz.conf
+cmd/main/*
+!cmd/main/main.go
