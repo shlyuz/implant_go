@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"log"
 
+	"github.com/keys-pub/keys"
 	"golang.org/x/crypto/nacl/box"
 	"shlyuz/pkg/utils/logging"
 )
@@ -23,13 +24,20 @@ type AsymmetricKeyPair struct {
 type PublicKey = *[32]byte
 type PrivateKey = *[32]byte
 
+func PubFromPriv(privKey PrivateKey) *PublicKey {
+	edKey := keys.NewX25519KeyFromPrivateKey(privKey)
+	pubKey := edKey.PublicKey().Bytes()
+	publicKey := (*[32]byte)(pubKey)
+	return &publicKey
+}
+
 func generateNonce() Nonce {
 	log.SetPrefix(logging.GetLogPrefix())
 	var nonce Nonce
 	randomNonce := make([]byte, 24)
 	_, err := rand.Read(randomNonce)
 	if err != nil {
-		log.Panicln("Failed to generate nonce ", err)
+		log.Panicln("failed to generate nonce ", err)
 	}
 	nonce = (*[24]byte)(randomNonce)
 	return nonce
@@ -44,7 +52,7 @@ func GenerateKeypair() (AsymmetricKeyPair, error) {
 	keyPair.PubKey = pubKey
 	keyPair.PrivKey = privKey
 	if err != nil {
-		log.Println("Failed to generate keypair: ", err)
+		log.Println("failed to generate keypair: ", err)
 	}
 	return keyPair, err
 }
@@ -60,7 +68,7 @@ func Decrypt(encBox AsymmetricBox, peersPublicKey PublicKey, privateKey PrivateK
 	decryptedBox := new(AsymmetricBox)
 	output, boolSuccess := box.Open(output, encBox.Message, encBox.IV, peersPublicKey, privateKey)
 	if !boolSuccess {
-		log.Println("Failed to open secret box, received: ", boolSuccess)
+		log.Println("failed to open secret box, received: ", boolSuccess)
 		return &encBox, boolSuccess
 	}
 	decryptedBox.IV = encBox.IV

@@ -37,7 +37,8 @@ func genComponentInfo() component.Component {
 	if err != nil {
 		log.Fatalln("failed to retrieve symkey")
 	}
-	componentConfig := config.ReadConfig(rawConfig, YadroComponent.XorKey, symKey)
+	// componentConfig := config.ReadConfig(rawConfig, YadroComponent.XorKey, symKey)
+	componentConfig := config.ReadPlaintextConfig(rawConfig, symKey) // debug
 	parsedConfig := config.ParseConfig(componentConfig.Message)
 	YadroComponent.Config.Id = parsedConfig.Id
 	YadroComponent.ComponentId = YadroComponent.Config.Id
