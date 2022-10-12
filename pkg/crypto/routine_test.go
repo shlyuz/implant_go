@@ -23,11 +23,11 @@ func TestRoutineTransmitFrame(t *testing.T) {
 	}
 	for _, test := range testcase {
 
-		encryptedTransmitFrame, lpKeyPair := PrepareTransmitFrame(test.dataframe, impKeyPair.PubKey)
+		encryptedTransmitFrame, lpKeyPair := PrepareTransmitFrame(test.dataframe, impKeyPair.PubKey, 12)
 		if bytes.Equal(test.dataframe, encryptedTransmitFrame) {
 			t.Fatal("[FAIL] PrepareTransmitFrame did not work properly")
 		}
-		decryptedTransmitFrame := UnwrapTransmitFrame(encryptedTransmitFrame, impKeyPair.PubKey, lpKeyPair.PrivKey)
+		decryptedTransmitFrame := UnwrapTransmitFrame(encryptedTransmitFrame, impKeyPair.PubKey, lpKeyPair.PrivKey, 12)
 		if bytes.Equal(encryptedTransmitFrame, decryptedTransmitFrame) {
 			t.Fatal("[FAIL] UnwrapTransmitFrame did not work properly")
 		}

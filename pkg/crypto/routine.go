@@ -13,18 +13,13 @@ import (
 	"shlyuz/pkg/utils/logging"
 )
 
-// TODO: This is read from a config
-const XORKEY = 12
-
 type EncryptedFrame struct {
 	Frame_id  int
 	Data      []byte
 	Chunk_len int
 }
 
-// TODO: Get INIT Signature
-
-func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey) ([]byte, asymmetric.AsymmetricKeyPair) {
+func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, xorKey int) ([]byte, asymmetric.AsymmetricKeyPair) {
 	log.SetPrefix(logging.GetLogPrefix())
 	symMsg := symmetric.Encrypt(dataFrame)
 
@@ -37,7 +32,7 @@ func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey) ([]by
 		log.Println("invalid dataframe")
 	}
 	hexChunkFrame := shlyuzHex.Encode(chunkFrame)
-	xorHexChunkFrame := xor.XorMessage(hexChunkFrame, XORKEY)
+	xorHexChunkFrame := xor.XorMessage(hexChunkFrame, xorKey)
 
 	hexKey := make([]byte, hex.EncodedLen(len(symMsg.Key)))
 	hex.Encode(hexKey, symMsg.Key)
@@ -69,7 +64,7 @@ func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey) ([]by
 	return retMsg, ImpKeyPair
 }
 
-func UnwrapTransmitFrame(transmitFrame []byte, peerPubKey asymmetric.PublicKey, myPrivKey asymmetric.PrivateKey) []byte {
+func UnwrapTransmitFrame(transmitFrame []byte, peerPubKey asymmetric.PublicKey, myPrivKey asymmetric.PrivateKey, xorKey int) []byte {
 	decryptionBox := new(asymmetric.AsymmetricBox)
 	decryptionBox.Message = transmitFrame[24:]
 	decryptionBox.IV = (*[24]byte)(transmitFrame[:24])
@@ -81,7 +76,7 @@ func UnwrapTransmitFrame(transmitFrame []byte, peerPubKey asymmetric.PublicKey, 
 	unhexedMsg := shlyuzHex.Decode(decBox.Message)
 	symKey := unhexedMsg[0:16]
 
-	unxorFrame := xor.XorMessage(unhexedMsg[len(symKey):], XORKEY) // appendedHexChunkFrame
+	unxorFrame := xor.XorMessage(unhexedMsg[len(symKey):], xorKey) // appendedHexChunkFrame
 	// nextSymKey := unxorFrame[:64]
 	uncFrame := shlyuzHex.Decode(unxorFrame[64:]) // this is chunkFrame
 

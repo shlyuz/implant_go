@@ -53,8 +53,6 @@ func genComponentInfo() component.Component {
 	YadroComponent.Manifest = makeManifest(YadroComponent.Config.Id)
 	YadroComponent.CurrentLpPubkey = parsedConfig.CryptoConfig.LpPk
 
-	// TODO: Prepare your transport
-
 	return YadroComponent
 }
 
@@ -69,6 +67,8 @@ func makeManifest(componentId string) component.ComponentManifest {
 
 func main() {
 	Component := genComponentInfo()
+	// TODO: Prepare your transport
+
 	// TODO: Send the actual manifest
 	initFrame := transaction.GenerateInitFrame(Component)
 	transaction.RelayInitFrame(Component, initFrame)

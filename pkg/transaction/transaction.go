@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"encoding/json"
-	"log"
 	"shlyuz/pkg/component"
 	routine "shlyuz/pkg/crypto"
 	"shlyuz/pkg/crypto/asymmetric"
@@ -30,7 +29,7 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 
 func RelayInitFrame(component component.Component, initFrame instructions.InstructionFrame) component.Component {
 	frameMap, _ := json.Marshal(initFrame)
-	transmitFrame, frameKeyPair := routine.PrepareTransmitFrame(frameMap, component.CurrentLpPubkey)
+	transmitFrame, frameKeyPair := routine.PrepareTransmitFrame(frameMap, component.CurrentLpPubkey, component.XorKey)
 	component.CurrentKeypair = frameKeyPair
 	// TODO: Do the relaying and retreive the ackFrame
 	return component

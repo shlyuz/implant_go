@@ -1,3 +1,4 @@
 configs/shlyuz.conf
+configs/symkey
 cmd/main/*
 !cmd/main/main.go
