@@ -1,9 +1,11 @@
 package config
 
 import (
+	"math/rand"
 	"testing"
 
 	"shlyuz/pkg/crypto/symmetric"
+	"shlyuz/pkg/encoding/xor"
 )
 
 var plaintextConfigTest = []struct {
@@ -40,6 +42,23 @@ func TestPlaintextConfig(t *testing.T) {
 			t.Log("[FAIL] Plaintext TskChkTimer parsing failed")
 			t.Error("Testcase: ", testcase.config)
 		}
-		t.Log(parsedConfig.CryptoConfig.SymKey)
 	}
+}
+
+func TestEncryptedConfig(t *testing.T) {
+	t.Parallel()
+	for _, testcase := range plaintextConfigTest {
+		xorKey := rand.Int()
+		encryptedConfig := symmetric.Encrypt(testcase.config)
+		testConfig := xor.XorMessage(encryptedConfig.Message, xorKey)
+		componentConfig := ReadConfig(testConfig, xorKey, encryptedConfig.Key)
+		if componentConfig.Message == nil {
+			t.Error("[FAIL] Reading encrypted config failed")
+		}
+		parsedConfig := ParseConfig(componentConfig.Message)
+		if parsedConfig.TskChkTimer != 60 {
+			t.Error("[FAIL] Encrypted TskChkTimer parsing failed")
+		}
+	}
+
 }
