@@ -7,6 +7,7 @@ import (
 	"shlyuz/pkg/component"
 	"shlyuz/pkg/config"
 	"shlyuz/pkg/crypto/asymmetric"
+	"shlyuz/pkg/transaction"
 	"shlyuz/pkg/utils/logging"
 	"shlyuz/pkg/utils/uname"
 )
@@ -50,6 +51,7 @@ func genComponentInfo() component.Component {
 	YadroComponent.XorKey = YadroComponent.Config.CryptoConfig.XorKey
 	YadroComponent.ConfigKey = componentConfig.Key
 	YadroComponent.Manifest = makeManifest(YadroComponent.Config.Id)
+	YadroComponent.CurrentLpPubkey = parsedConfig.CryptoConfig.LpPk
 
 	// TODO: Prepare your transport
 
@@ -68,6 +70,8 @@ func makeManifest(componentId string) component.ComponentManifest {
 func main() {
 	Component := genComponentInfo()
 	// TODO: Send the actual manifest
+	initFrame := transaction.GenerateInitFrame(Component)
+	transaction.RelayInitFrame(Component, initFrame)
 
 	// TODO: Implement loop here to do the actual stuff
 }

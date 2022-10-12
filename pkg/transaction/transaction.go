@@ -2,8 +2,9 @@ package transaction
 
 import (
 	"encoding/json"
+	"log"
 	"shlyuz/pkg/component"
-	"shlyuz/pkg/crypto"
+	routine "shlyuz/pkg/crypto"
 	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/instructions"
 )
@@ -13,7 +14,7 @@ type initFrameArgs struct {
 	ipk      asymmetric.PublicKey
 }
 
-func generateInitFrame(component component.Component) instructions.InstructionFrame {
+func GenerateInitFrame(component component.Component) instructions.InstructionFrame {
 	var initFrame instructions.Transaction
 	var initArgs initFrameArgs
 
@@ -25,6 +26,14 @@ func generateInitFrame(component component.Component) instructions.InstructionFr
 	initFrame.ComponentId = component.Config.Id
 	instructionFrame := instructions.CreateInstructionFrame(initFrame)
 	return *instructionFrame
+}
+
+func RelayInitFrame(component component.Component, initFrame instructions.InstructionFrame) component.Component {
+	frameMap, _ := json.Marshal(initFrame)
+	transmitFrame, frameKeyPair := routine.PrepareTransmitFrame(frameMap, component.CurrentLpPubkey)
+	component.CurrentKeypair = frameKeyPair
+	// TODO: Do the relaying and retreive the ackFrame
+	return component
 }
 
 func rekey(frame routine.EncryptedFrame) {
