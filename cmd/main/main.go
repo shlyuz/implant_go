@@ -76,10 +76,11 @@ func main() {
 	if err != nil {
 		log.Fatalln("transport failed to initalize: ", err)
 	}
+	Component.CmdChannel = make(chan []byte)
 
 	// TODO: Send the actual manifest
 	initFrame := transaction.GenerateInitFrame(Component)
-	transaction.RelayInitFrame(Component, initFrame, transport)
+	transaction.RelayInitFrame(&Component, initFrame, transport)
 
 	// TODO: Implement loop here to do the actual stuff
 }

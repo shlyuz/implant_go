@@ -20,11 +20,10 @@ type Transport interface {
 func Send(Component *component.Component) error {
 	func(shlyuzComponent *component.Component) []byte {
 		var data []byte
-		for data := range shlyuzComponent.CmdChannel {
-			err := os.WriteFile("~/tmp/shlyuztest/chan", data, 0600)
-			if err != nil {
-				log.Println("something went wrong")
-			}
+		data = <-shlyuzComponent.CmdChannel
+		err := os.WriteFile("~/tmp/shlyuztest/chan", data, 0600)
+		if err != nil {
+			log.Println("something went wrong")
 		}
 		close(shlyuzComponent.CmdChannel)
 		return data
