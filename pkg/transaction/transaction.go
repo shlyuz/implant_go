@@ -32,15 +32,15 @@ func writeToChannel(channel chan []byte, data []byte) {
 	channel <- data
 }
 
+func readFromChannel(channel chan []byte) []byte {
+	data := <-channel
+	return data
+}
+
 func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions.InstructionFrame, shlyuzTransport transport.TransportMethod) *component.Component {
 	frameMap, _ := json.Marshal(initFrame)
 	transmitFrame, frameKeyPair := routine.PrepareSealedFrame(frameMap, shlyuzComponent.CurrentLpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
 	shlyuzComponent.CurrentKeypair = frameKeyPair
-	// go func(shlyuzComponent *component.Component, frame []byte) {
-	// 	shlyuzComponent.CmdChannel <- transmitFrame
-	// 	close(shlyuzComponent.CmdChannel)
-	// }(&shlyuzComponent, transmitFrame)
-	// shlyuzComponent.CmdChannel <- transmitFrame
 	go writeToChannel(shlyuzComponent.CmdChannel, transmitFrame)
 	// TODO: Do the relaying and retreive the ackFrame
 	shlyuzTransport.Send(shlyuzComponent)

@@ -18,7 +18,7 @@ import (
 //
 //go:generate cp -r ../../configs/shlyuz.conf ./shlyuz.conf
 //go:generate cp -r ../../configs/symkey ./symkey
-//go:generate go build -o zombie ../../internal/pkg/zombie.go
+//go:generate go build -o zombie ../../internal/zombie/pkg/zombie.go
 //go:embed *
 var configFs embed.FS
 

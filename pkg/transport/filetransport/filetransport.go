@@ -18,16 +18,21 @@ type Transport interface {
 }
 
 func Send(Component *component.Component) error {
-	func(shlyuzComponent *component.Component) []byte {
+	data := func(shlyuzComponent *component.Component) []byte {
 		var data []byte
 		data = <-shlyuzComponent.CmdChannel
-		err := os.WriteFile("~/tmp/shlyuztest/chan", data, 0600)
+		userHomeDir, err := os.UserHomeDir()
 		if err != nil {
-			log.Println("something went wrong")
+			log.Fatalln("failed to get user home dir: ", err)
+		}
+		channelPath := userHomeDir + "/tmp/shlyuztest/chan"
+		err = os.WriteFile(channelPath, data, 0600)
+		if err != nil {
+			log.Println("something went wrong: ", err)
 		}
 		close(shlyuzComponent.CmdChannel)
 		return data
 	}(Component)
-
+	log.Println(data)
 	return nil
 }
