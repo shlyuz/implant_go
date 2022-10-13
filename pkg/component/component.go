@@ -21,7 +21,7 @@ type Component struct {
 	CurrentKeypair     asymmetric.AsymmetricKeyPair
 	CurrentLpPubkey    *[32]byte
 	XorKey             int
-	CmdQueue           []byte
+	CmdChannel         chan []byte
 	CmdProcessingQueue []byte
 	CmdDoneQueue       []byte
 }
@@ -43,7 +43,7 @@ func Rekey(frame instructions.Transaction, component Component) (Component, []by
 	rawRekeyFrame := instructions.CreateInstructionFrame(frame)
 	rawFrameBytes := new(bytes.Buffer)
 	json.NewEncoder(rawFrameBytes).Encode(rawRekeyFrame)
-	rekeyFrame, newComponentKeypair := routine.PrepareTransmitFrame(rawFrameBytes.Bytes(), component.CurrentLpPubkey)
+	rekeyFrame, newComponentKeypair := routine.PrepareTransmitFrame(rawFrameBytes.Bytes(), component.CurrentLpPubkey, component.XorKey)
 	component.CurrentKeypair = newComponentKeypair
 	return component, rekeyFrame
 }

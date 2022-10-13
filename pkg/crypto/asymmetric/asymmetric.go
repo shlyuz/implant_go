@@ -4,9 +4,11 @@ import (
 	"crypto/rand"
 	"log"
 
+	"shlyuz/pkg/utils/logging"
+
 	"github.com/keys-pub/keys"
 	"golang.org/x/crypto/nacl/box"
-	"shlyuz/pkg/utils/logging"
+	"golang.org/x/crypto/nacl/secretbox"
 )
 
 type Nonce = *[24]byte
@@ -57,6 +59,19 @@ func GenerateKeypair() (AsymmetricKeyPair, error) {
 	return keyPair, err
 }
 
+func DecryptSealed(encBox AsymmetricBox, decryptionKey PrivateKey) (*AsymmetricBox, bool) {
+	decryptedSealedBox := new(AsymmetricBox)
+	decryptedSealedBox.IV = encBox.IV
+	var output []byte
+	output, boolSuccess := secretbox.Open(output, encBox.Message, encBox.IV, decryptionKey)
+	if !boolSuccess {
+		log.Println("failed to open sealed box, received: ", boolSuccess)
+		return &encBox, boolSuccess
+	}
+	decryptedSealedBox.Message = output
+	return decryptedSealedBox, true
+}
+
 // Returns an Asymmetric box with the decrypted contents
 //
 // @param encBox: A pointer to the AsymmetricBox containing the message to decrypt
@@ -74,6 +89,16 @@ func Decrypt(encBox AsymmetricBox, peersPublicKey PublicKey, privateKey PrivateK
 	decryptedBox.IV = encBox.IV
 	decryptedBox.Message = output
 	return decryptedBox, boolSuccess
+}
+
+func EncryptSealed(message []byte, peerPublicKey PublicKey) AsymmetricBox {
+	encryptedSealedBox := new(AsymmetricBox)
+	nonce := generateNonce()
+	encryptedSealedBox.IV = nonce
+	var output []byte
+	output = secretbox.Seal(output, message, nonce, peerPublicKey)
+	encryptedSealedBox.Message = output
+	return *encryptedSealedBox
 }
 
 // Retruns the encrypted output from an Aymmetric box

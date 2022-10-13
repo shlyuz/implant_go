@@ -3,11 +3,13 @@ package main
 import (
 	"embed"
 	"log"
+	"sync"
 
 	"shlyuz/pkg/component"
 	"shlyuz/pkg/config"
 	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/transaction"
+	"shlyuz/pkg/transport"
 	"shlyuz/pkg/utils/logging"
 	"shlyuz/pkg/utils/uname"
 )
@@ -68,10 +70,16 @@ func makeManifest(componentId string) component.ComponentManifest {
 func main() {
 	Component := genComponentInfo()
 	// TODO: Prepare your transport
+	transportWg := sync.WaitGroup{}
+	defer transportWg.Wait()
+	transport, _, err := transport.PrepareTransport(&Component, []string{})
+	if err != nil {
+		log.Fatalln("transport failed to initalize: ", err)
+	}
 
 	// TODO: Send the actual manifest
 	initFrame := transaction.GenerateInitFrame(Component)
-	transaction.RelayInitFrame(Component, initFrame)
+	transaction.RelayInitFrame(Component, initFrame, transport)
 
 	// TODO: Implement loop here to do the actual stuff
 }
