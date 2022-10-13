@@ -3,15 +3,20 @@ package transaction
 import (
 	"encoding/json"
 	"log"
-	"shlyuz/pkg/component"
+	"shlyuz/internal/debugLp/pkg/component"
+	"shlyuz/internal/debugLp/pkg/instructions"
+	"shlyuz/internal/debugLp/pkg/transport"
 	routine "shlyuz/pkg/crypto"
 	"shlyuz/pkg/crypto/asymmetric"
-	"shlyuz/pkg/instructions"
-	"shlyuz/pkg/transport"
 )
 
 type initFrameArgs struct {
 	manifest component.ComponentManifest
+	lpk      asymmetric.PublicKey
+}
+
+type implantInitFrameArgs struct {
+	manifest component.ImplantManifest
 	ipk      asymmetric.PublicKey
 }
 
@@ -21,7 +26,7 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 
 	initFrame.Cmd = "ii"
 	initArgs.manifest = component.Manifest
-	argMapping := initFrameArgs{manifest: component.Manifest, ipk: component.InitalKeypair.PubKey}
+	argMapping := initFrameArgs{manifest: component.Manifest, lpk: component.InitalKeypair.PubKey}
 	argMap, _ := json.Marshal(argMapping)
 	initFrame.Arg = argMap
 	initFrame.ComponentId = component.Config.Id
@@ -29,6 +34,14 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 	return *instructionFrame
 }
 
+// TODO: Finish me
+func DecodeInitFrame(initFrame []byte) {
+	var implantManifest implantInitFrameArgs
+	err := json.Unmarshal(initFrame, &implantManifest)
+	if err != nil {
+		log.Println("failed to decode received init frame: ", err)
+	}
+}
 func writeToChannel(channel chan []byte, data []byte) {
 	channel <- data
 }
@@ -40,7 +53,7 @@ func readFromChannel(channel chan []byte) []byte {
 
 func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions.InstructionFrame, shlyuzTransport transport.TransportMethod) *component.Component {
 	frameMap, _ := json.Marshal(initFrame)
-	transmitFrame, frameKeyPair := routine.PrepareSealedFrame(frameMap, shlyuzComponent.CurrentLpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	transmitFrame, frameKeyPair := routine.PrepareSealedFrame(frameMap, shlyuzComponent.CurrentImpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
 	shlyuzComponent.CurrentKeypair = frameKeyPair
 	go writeToChannel(shlyuzComponent.CmdChannel, transmitFrame)
 	// TODO: Do the relaying and retreive the ackFrame
@@ -51,6 +64,16 @@ func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions
 	log.Println("Sent init frame.")
 	log.Println("Awaiting response for init")
 	return shlyuzComponent
+}
+
+func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport transport.TransportMethod) []byte {
+	data, boolSuccess, err := shlyuzTransport.Recv(shlyuzComponent)
+	if boolSuccess == false {
+		log.Println("failed to receive from channel: ", err)
+	}
+	// implantInitFrame := routine.UnwrapSealedFrame(data, shlyuzComponent.InitalKeypair.PrivKey, shlyuzComponent.XorKey)
+	routine.UnwrapSealedFrame(data, shlyuzComponent.InitalKeypair.PrivKey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	return nil
 }
 
 func rekey(frame routine.EncryptedFrame) {

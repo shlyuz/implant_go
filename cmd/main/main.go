@@ -7,7 +7,6 @@ import (
 
 	"shlyuz/pkg/component"
 	"shlyuz/pkg/config"
-	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/transaction"
 	"shlyuz/pkg/transport"
 	"shlyuz/pkg/utils/logging"
@@ -28,10 +27,6 @@ func genComponentInfo() component.Component {
 	var err error
 	log.SetPrefix(logging.GetLogPrefix())
 	log.Println("Started Shlyuz")
-	YadroComponent.CurrentKeypair, err = asymmetric.GenerateKeypair()
-	if err != nil {
-		log.Fatalln("failed to generate a current keypair")
-	}
 	rawConfig, err := configFs.ReadFile("shlyuz.conf")
 	if err != nil {
 		log.Fatalln("failed to get embedded config")
@@ -50,6 +45,7 @@ func genComponentInfo() component.Component {
 	YadroComponent.Config.TskChkTimer = parsedConfig.TskChkTimer
 	YadroComponent.Config.CryptoConfig = parsedConfig.CryptoConfig
 	YadroComponent.InitalKeypair = YadroComponent.Config.CryptoConfig.CompKeypair
+	YadroComponent.CurrentKeypair = YadroComponent.InitalKeypair
 	YadroComponent.XorKey = YadroComponent.Config.CryptoConfig.XorKey
 	YadroComponent.ConfigKey = componentConfig.Key
 	YadroComponent.Manifest = makeManifest(YadroComponent.Config.Id)

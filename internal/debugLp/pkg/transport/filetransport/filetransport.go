@@ -3,7 +3,7 @@ package filetransport
 import (
 	"log"
 	"os"
-	"shlyuz/pkg/component"
+	"shlyuz/internal/debugLp/pkg/component"
 )
 
 type TransportInfo struct {
@@ -50,10 +50,10 @@ func Recv(Component *component.Component) ([]byte, error) {
 		log.Println("failed to read transport channel: ", err)
 		return nil, err
 	}
-	err = os.Truncate(channelPath, 0)
-	if err != nil {
-		log.Println("WARNING failed to clear transport channel contents: ", err)
-		return data, err
-	}
+	// err = os.Truncate(channelPath, 0)
+	// if err != nil {
+	// 	log.Println("WARNING failed to clear transport channel contents: ", err)
+	// 	return data, err
+	// }
 	return data, nil
 }

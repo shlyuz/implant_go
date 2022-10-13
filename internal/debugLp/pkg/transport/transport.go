@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"shlyuz/pkg/component"
-	"shlyuz/pkg/transport/filetransport"
+	"shlyuz/internal/debugLp/pkg/component"
+	"shlyuz/internal/debugLp/pkg/transport/filetransport"
 	"shlyuz/pkg/utils/idgen"
 	"shlyuz/pkg/utils/logging"
 )

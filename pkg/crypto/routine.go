@@ -138,10 +138,25 @@ func UnwrapTransmitFrame(transmitFrame []byte, peerPubKey asymmetric.PublicKey, 
 	return recvMsg.Message
 }
 
-func UnwrapSealedFrame(transmitFrame []byte, myPrivKey asymmetric.PrivateKey, xorKey int) []byte {
+func UnwrapSealedFrame(transmitFrame []byte, myPrivKey asymmetric.PrivateKey, xorKey int, initSig []byte) []byte {
+	// Check for init sig and compare against expected. Strip it if it works, otherwise return a null message to signal an error
+	retrievedInitSig := make([]byte, len(initSig))
+	copy(retrievedInitSig[:], transmitFrame[:len(initSig)])
+	sigCheckRes := bytes.Compare(retrievedInitSig, initSig)
+
+	if sigCheckRes != 0 {
+		// we didn't get a valid init sign in this message. Return a null and discard outside of routine
+		log.Println("invalid init sig, got'", retrievedInitSig, "'")
+		return nil
+	}
+
+	trueFrameLen := len(transmitFrame) - len(initSig)
+	strippedTransmitFrame := make([]byte, trueFrameLen)
+	copy(strippedTransmitFrame[:], transmitFrame[len(initSig):])
+
 	decryptionBox := new(asymmetric.AsymmetricBox)
-	decryptionBox.Message = transmitFrame[24:]
-	decryptionBox.IV = (*[24]byte)(transmitFrame[:24])
+	decryptionBox.Message = strippedTransmitFrame[24:]
+	decryptionBox.IV = (*[24]byte)(strippedTransmitFrame[:24])
 
 	decBox, boolAsymSuccess := asymmetric.DecryptSealed(*decryptionBox, myPrivKey)
 	if !boolAsymSuccess {

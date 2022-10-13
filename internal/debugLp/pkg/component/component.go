@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"shlyuz/pkg/config"
-	routine "shlyuz/pkg/crypto"
+	"shlyuz/internal/debugLp/pkg/config"
+	// routine "shlyuz/pkg/crypto"
 	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/instructions"
 )
@@ -14,12 +14,12 @@ type Component struct {
 	// logger             log.Logger
 	ConfigFile         string
 	ConfigKey          []byte
-	Config             config.YadroConfig
+	Config             config.LpConfig
 	ComponentId        string
 	Manifest           ComponentManifest
 	InitalKeypair      asymmetric.AsymmetricKeyPair
 	CurrentKeypair     asymmetric.AsymmetricKeyPair
-	CurrentLpPubkey    *[32]byte
+	CurrentImpPubkey   *[32]byte
 	XorKey             int
 	CmdChannel         chan []byte
 	CmdProcessingQueue []byte
@@ -27,20 +27,26 @@ type Component struct {
 }
 
 type ComponentManifest struct {
+	Lp_id       string
+	Lp_os       string
+	Lp_hostname string
+}
+
+type ImplantManifest struct {
 	Implant_id       string
 	Implant_os       string
 	Implant_hostname string
 }
 
-func Rekey(frame instructions.Transaction, component Component) (Component, []byte) {
-	component.CurrentLpPubkey = component.Config.CryptoConfig.LpPk
-	rawRekeyFrame := instructions.CreateInstructionFrame(frame)
-	rawFrameBytes := new(bytes.Buffer)
-	json.NewEncoder(rawFrameBytes).Encode(rawRekeyFrame)
-	rekeyFrame, newComponentKeypair := routine.PrepareTransmitFrame(rawFrameBytes.Bytes(), component.CurrentLpPubkey, component.XorKey)
-	component.CurrentKeypair = newComponentKeypair
-	return component, rekeyFrame
-}
+// func Rekey(frame instructions.Transaction, component Component) (Component, []byte) {
+// 	component.CurrentLpPubkey = component.Config.CryptoConfig.LpPk
+// 	rawRekeyFrame := instructions.CreateInstructionFrame(frame)
+// 	rawFrameBytes := new(bytes.Buffer)
+// 	json.NewEncoder(rawFrameBytes).Encode(rawRekeyFrame)
+// 	rekeyFrame, newComponentKeypair := routine.PrepareTransmitFrame(rawFrameBytes.Bytes(), component.CurrentLpPubkey, component.XorKey)
+// 	component.CurrentKeypair = newComponentKeypair
+// 	return component, rekeyFrame
+// }
 
 // func GetCmd(frame instructions.Transaction, component Component) (Component, bool) {
 

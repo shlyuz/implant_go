@@ -11,5 +11,12 @@
             "mode": "debug",
             "program": "${workspaceFolder}/cmd/main/"
         },
+        {
+            "name": "Launch Debug LP",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/internal/debugLp/cmd/main"
+        }
     ]
 }
