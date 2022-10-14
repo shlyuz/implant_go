@@ -46,7 +46,7 @@ func CreateInstructionFrame(DataFrame Transaction, includePlatInfo bool) *Instru
 	if DataFrame.TxId != "" {
 		IFrame.TxId = DataFrame.TxId
 	} else {
-		IFrame.TxId = idgen.GenerateId()
+		IFrame.TxId = idgen.GenerateTxId()
 	}
 	// TODO: Add a boolean to determine whether we need to send this. Don't send this to clients, do send this to teamserver
 	if includePlatInfo {

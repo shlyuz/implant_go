@@ -46,7 +46,7 @@ func CreateInstructionFrame(DataFrame Transaction) *InstructionFrame {
 	if DataFrame.TxId != "" {
 		IFrame.TxId = DataFrame.TxId
 	} else {
-		IFrame.TxId = idgen.GenerateId()
+		IFrame.TxId = idgen.GenerateTxId()
 	}
 	IFrame.Uname = *uname.GetUname()
 	return IFrame

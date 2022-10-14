@@ -17,15 +17,31 @@ type Transport interface {
 	Info() TransportInfo
 }
 
+func getPath() string {
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalln("failed to get user home dir: ", err)
+	}
+	channelPath := userHomeDir + "/tmp/shlyuztest/chan" // TODO: Fixme
+	return channelPath
+}
+
 func Send(Component *component.Component) error {
 	err := func(shlyuzComponent *component.Component) error {
 		data := <-shlyuzComponent.CmdChannel
-		userHomeDir, err := os.UserHomeDir()
-		if err != nil {
-			log.Fatalln("failed to get user home dir: ", err)
+		channelPath := getPath()
+		for {
+			check_file, err := os.Stat(channelPath)
+			if err != nil {
+				log.Fatalln("failed to check channel size: ", err)
+			}
+			if check_file.Size() != 0 {
+				continue
+			} else {
+				break
+			}
 		}
-		channelPath := userHomeDir + "/tmp/shlyuztest/chan"
-		err = os.WriteFile(channelPath, data, 0600)
+		err := os.WriteFile(channelPath, data, 0600)
 		if err != nil {
 			log.Println("something went wrong: ", err)
 		}
@@ -39,12 +55,7 @@ func Send(Component *component.Component) error {
 }
 
 func Recv(Component *component.Component) ([]byte, error) {
-	// this should be a func
-	userHomeDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatalln("failed to get user home dir: ", err)
-	}
-	channelPath := userHomeDir + "/tmp/shlyuztest/chan"
+	channelPath := getPath()
 	// read the contents of the file
 	data, err := os.ReadFile(channelPath)
 	if err != nil {

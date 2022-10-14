@@ -86,7 +86,7 @@ type FileTransportMethod struct {
 }
 
 func newFileTransportMethod(arguments []string) (TransportMethod, bool, error) {
-	return &FileTransportMethod{"file_transport", idgen.GenerateId(), "~/tmp/shlyuztest/"}, true, nil
+	return &FileTransportMethod{"file_transport", idgen.GenerateTxId(), "~/tmp/shlyuztest/"}, true, nil
 }
 
 func init() {

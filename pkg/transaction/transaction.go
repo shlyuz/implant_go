@@ -8,6 +8,7 @@ import (
 	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/instructions"
 	"shlyuz/pkg/transport"
+	"shlyuz/pkg/utils/idgen"
 )
 
 type initFrameArgs struct {
@@ -18,6 +19,11 @@ type initFrameArgs struct {
 type initAckFrameArgs struct {
 	Lpk  asymmetric.PublicKey
 	Txid string
+}
+
+type reqCmdArgs struct {
+	ipk  asymmetric.PublicKey
+	txId string
 }
 
 type RegisteredServer struct {
@@ -50,6 +56,17 @@ func decodeInitAckFrame(initFrame []byte) instructions.InstructionFrame {
 	return lpInitAckInstructionFrame
 }
 
+func decodeTransactionFrame(transactionFrame []byte) instructions.InstructionFrame {
+	var instructionFrame instructions.InstructionFrame
+	err := json.Unmarshal(transactionFrame, &instructionFrame)
+	if err != nil {
+		log.Println("failed to decode transaction: ", err)
+		log.Println("[dbgtransaction] ", transactionFrame)
+		return instructionFrame
+	}
+	return instructionFrame
+}
+
 func writeToChannel(channel chan []byte, data []byte) {
 	channel <- data
 }
@@ -64,12 +81,24 @@ func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions
 	transmitFrame, frameKeyPair := routine.PrepareSealedFrame(frameMap, shlyuzComponent.CurrentLpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
 	shlyuzComponent.CurrentKeypair = frameKeyPair
 	go writeToChannel(shlyuzComponent.CmdChannel, transmitFrame)
-	// TODO: Do the relaying and retreive the ackFrame
 	boolSuccess, err := shlyuzTransport.Send(shlyuzComponent)
 	if !boolSuccess {
 		log.Fatalln("failed to send init: ", err)
 	}
 	log.Println("Sent init frame.")
+	return shlyuzComponent
+}
+
+func RelayInstructionFrame(shlyuzComponent *component.Component, instruction instructions.InstructionFrame, shlyuzTransport transport.TransportMethod) *component.Component {
+	dataFrame, _ := json.Marshal(instruction)
+	transmitFrame, frameKeyPair := routine.PrepareTransmitFrame(dataFrame, shlyuzComponent.CurrentLpPubkey, shlyuzComponent.XorKey)
+	shlyuzComponent.CurrentKeypair = frameKeyPair
+	go writeToChannel(shlyuzComponent.CmdChannel, transmitFrame)
+	boolSuccess, err := shlyuzTransport.Send(shlyuzComponent)
+	if !boolSuccess {
+		log.Fatalln("failed to send instruction: ", err)
+	}
+	log.Println("sent instruction")
 	return shlyuzComponent
 }
 
@@ -109,6 +138,41 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 	lpInit.Interface = shlyuzTransport
 	lpInit.Id = lpInitInstruction.ComponentId
 	return lpInit, true
+}
+
+func RetrieveInstruction(shlyuzComponent *component.Component, shlyuzTransport transport.TransportMethod) (instructions.InstructionFrame, error) {
+	var instruction instructions.InstructionFrame
+	var err error
+	data, boolSuccess, err := shlyuzTransport.Recv(shlyuzComponent)
+	if !boolSuccess {
+		return instruction, err
+	}
+	transactionFrame := routine.UnwrapSealedFrame(data, shlyuzComponent.CurrentKeypair.PrivKey, shlyuzComponent.CurrentLpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	instruction = decodeTransactionFrame(transactionFrame)
+	return instruction, nil
+}
+
+func RequestInstruction(shlyuzComponent *component.Component, shlyuzTransport transport.TransportMethod) instructions.InstructionFrame {
+	var transactionFrame instructions.Transaction
+	var rCmdArgs reqCmdArgs
+	transactionFrame.Cmd = "icmdr"
+	rCmdArgs.ipk = shlyuzComponent.CurrentKeypair.PubKey
+	rCmdArgs.txId = idgen.GenerateTxId()
+	transactionFrame.ComponentId = shlyuzComponent.ComponentId
+	argMap, _ := json.Marshal(rCmdArgs)
+	transactionFrame.Arg = argMap
+	transactionFrame.TxId = rCmdArgs.txId
+	instructionFrame := instructions.CreateInstructionFrame(transactionFrame)
+	return *instructionFrame
+}
+
+func readFromTransport(server RegisteredServer, shlyuzComponent *component.Component) ([]byte, bool, error) {
+	data, boolSuccess, err := server.Interface.Recv(shlyuzComponent)
+	if !boolSuccess {
+		log.Println("failed to receive from channel: ", err)
+		return data, false, err
+	}
+	return data, true, nil
 }
 
 func rekey(frame routine.EncryptedFrame) {
