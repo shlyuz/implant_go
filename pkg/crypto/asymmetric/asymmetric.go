@@ -2,13 +2,13 @@ package asymmetric
 
 import (
 	"crypto/rand"
+	"io"
 	"log"
 
 	"shlyuz/pkg/utils/logging"
 
-	"github.com/keys-pub/keys"
+	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/nacl/box"
-	"golang.org/x/crypto/nacl/secretbox"
 )
 
 type Nonce = *[24]byte
@@ -27,8 +27,8 @@ type PublicKey = *[32]byte
 type PrivateKey = *[32]byte
 
 func PubFromPriv(privKey PrivateKey) *PublicKey {
-	edKey := keys.NewX25519KeyFromPrivateKey(privKey)
-	pubKey := edKey.PublicKey().Bytes()
+	pubKey := new([32]byte)
+	curve25519.ScalarBaseMult(pubKey, privKey)
 	publicKey := (*[32]byte)(pubKey)
 	return &publicKey
 }
@@ -59,11 +59,11 @@ func GenerateKeypair() (AsymmetricKeyPair, error) {
 	return keyPair, err
 }
 
-func DecryptSealed(encBox AsymmetricBox, decryptionKey PrivateKey) (*AsymmetricBox, bool) {
+func DecryptSealed(encBox AsymmetricBox, decryptionKey PrivateKey, pubKey PublicKey) (*AsymmetricBox, bool) {
 	decryptedSealedBox := new(AsymmetricBox)
 	decryptedSealedBox.IV = encBox.IV
 	var output []byte
-	output, boolSuccess := secretbox.Open(output, encBox.Message, encBox.IV, decryptionKey)
+	output, boolSuccess := box.OpenAnonymous(output, encBox.Message, pubKey, decryptionKey)
 	if !boolSuccess {
 		log.Println("failed to open sealed box, received: ", boolSuccess)
 		return &encBox, boolSuccess
@@ -96,7 +96,12 @@ func EncryptSealed(message []byte, peerPublicKey PublicKey) AsymmetricBox {
 	nonce := generateNonce()
 	encryptedSealedBox.IV = nonce
 	var output []byte
-	output = secretbox.Seal(output, message, nonce, peerPublicKey)
+	var throwAway io.Reader
+	output, err := box.SealAnonymous(output, message, peerPublicKey, throwAway)
+	if err != nil {
+		log.Fatalln("failed to generate init message: ", err)
+	}
+	_ = throwAway
 	encryptedSealedBox.Message = output
 	return *encryptedSealedBox
 }

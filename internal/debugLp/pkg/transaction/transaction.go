@@ -71,8 +71,7 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 	if boolSuccess == false {
 		log.Println("failed to receive from channel: ", err)
 	}
-	// implantInitFrame := routine.UnwrapSealedFrame(data, shlyuzComponent.InitalKeypair.PrivKey, shlyuzComponent.XorKey)
-	routine.UnwrapSealedFrame(data, shlyuzComponent.InitalKeypair.PrivKey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	implantInitFrame := routine.UnwrapSealedFrame(data, shlyuzComponent.InitalKeypair.PrivKey, shlyuzComponent.InitalKeypair.PubKey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
 	return nil
 }
 

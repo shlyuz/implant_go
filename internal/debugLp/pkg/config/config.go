@@ -8,6 +8,7 @@ import (
 
 	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/crypto/symmetric"
+	"shlyuz/pkg/encoding/hex"
 	"shlyuz/pkg/encoding/xor"
 )
 
@@ -64,9 +65,11 @@ func ParseConfig(config []byte) LpConfig {
 	if err != nil {
 		log.Fatalln("failed to read config section 2: ", err)
 	}
-	ParsedConfig.CryptoConfig.CompKeyPair.PrivKey = (*[32]byte)([]byte(cryptoSec.Key("priv_key").Value()))
+	compPrivKey := (*[32]byte)(hex.Decode([]byte(cryptoSec.Key("priv_key").Value())))
+	ParsedConfig.CryptoConfig.CompKeyPair.PrivKey = (*[32]byte)(compPrivKey)
 	ParsedConfig.CryptoConfig.CompKeyPair.PubKey = *asymmetric.PubFromPriv(ParsedConfig.CryptoConfig.CompKeyPair.PrivKey)
-	ParsedConfig.CryptoConfig.ImplantPk = (*[32]byte)([]byte(cryptoSec.Key("imp_pk").Value()))
+	impPubKey := hex.Decode([]byte(cryptoSec.Key("imp_pk").Value()))
+	ParsedConfig.CryptoConfig.ImplantPk = (*[32]byte)(impPubKey)
 	ParsedConfig.CryptoConfig.SymKey = []byte(cryptoSec.Key("sym_key").Value())
 	xor64Key, err := strconv.ParseInt(cryptoSec.Key("xor_key").Value(), 0, 64)
 	if err != nil {

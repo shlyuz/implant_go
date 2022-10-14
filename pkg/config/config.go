@@ -8,6 +8,7 @@ import (
 
 	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/crypto/symmetric"
+	"shlyuz/pkg/encoding/hex"
 	"shlyuz/pkg/encoding/xor"
 )
 
@@ -50,10 +51,11 @@ func ParseConfig(config []byte) YadroConfig {
 	if err != nil {
 		log.Fatalln("failed to read config section 2: ", err)
 	}
-
-	ParsedConfig.CryptoConfig.CompKeypair.PrivKey = (*[32]byte)([]byte(cryptoSec.Key("priv_key").Value()))
+	compPrivKey := (*[32]byte)(hex.Decode([]byte(cryptoSec.Key("priv_key").Value())))
+	ParsedConfig.CryptoConfig.CompKeypair.PrivKey = (*[32]byte)(compPrivKey)
 	ParsedConfig.CryptoConfig.CompKeypair.PubKey = *asymmetric.PubFromPriv(ParsedConfig.CryptoConfig.CompKeypair.PrivKey)
-	ParsedConfig.CryptoConfig.LpPk = (*[32]byte)([]byte(cryptoSec.Key("lp_pk").Value()))
+	lpPubKey := (*[32]byte)(hex.Decode([]byte(cryptoSec.Key("lp_pk").Value())))
+	ParsedConfig.CryptoConfig.LpPk = (*[32]byte)(lpPubKey)
 	ParsedConfig.CryptoConfig.SymKey = []byte(cryptoSec.Key("sym_key").Value())
 	xor64Key, err := strconv.ParseInt(cryptoSec.Key("xor_key").Value(), 0, 64)
 	if err != nil {

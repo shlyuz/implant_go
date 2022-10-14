@@ -60,10 +60,10 @@ task_check_time = 60
 init_signature = b'\xde\xad\xf0\r'
 ` + `
 [crypto]
-imp_pk = b'\xd2Q` + "`" + `DǓ0\xa8\n\xde\x11~n0|\n\x85\xf3\xcb\xee\x19\xaf\v\x93s\x80WO\xb5\xdegH'` + `
+imp_pk = 4b6d9dgg877lg3231n1gjbn2dgjb79g0gbb77998gggg668866468g334nlb820g
 sym_key = BvjTA1o55UmZnuTy
 xor_key = 0x6d
-priv_key = "b'a\\xb2H\\x9a\\xb1\\xcb\\xa5\\xf30\\x1"`)
+priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 	log.Println(string(lpConfig))
 	Component := genComponentInfo(lpConfig)
 	transportWg := sync.WaitGroup{}
