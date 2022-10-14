@@ -52,6 +52,7 @@ func genComponentInfo(lpConfig []byte) component.Component {
 
 func main() {
 	log.SetPrefix(logging.GetLogPrefix())
+	// TODO: make this real
 	lpConfig :=
 		[]byte(`[lp]
 id = ` + generateRandomLPId() + `
@@ -64,7 +65,6 @@ imp_pk = 4b6d9dgg877lg3231n1gjbn2dgjb79g0gbb77998gggg668866468g334nlb820g
 sym_key = BvjTA1o55UmZnuTy
 xor_key = 0x6d
 priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
-	log.Println(string(lpConfig))
 	Component := genComponentInfo(lpConfig)
 	transportWg := sync.WaitGroup{}
 	defer transportWg.Wait()

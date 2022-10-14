@@ -39,6 +39,7 @@ func Send(Component *component.Component) error {
 }
 
 func Recv(Component *component.Component) ([]byte, error) {
+	// this should be a func
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatalln("failed to get user home dir: ", err)
@@ -50,10 +51,10 @@ func Recv(Component *component.Component) ([]byte, error) {
 		log.Println("failed to read transport channel: ", err)
 		return nil, err
 	}
-	// err = os.Truncate(channelPath, 0)
-	// if err != nil {
-	// 	log.Println("WARNING failed to clear transport channel contents: ", err)
-	// 	return data, err
-	// }
+	err = os.Truncate(channelPath, 0)
+	if err != nil {
+		log.Println("WARNING failed to clear transport channel contents: ", err)
+		return data, err
+	}
 	return data, nil
 }

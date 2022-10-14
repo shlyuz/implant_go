@@ -65,7 +65,6 @@ func makeManifest(componentId string) component.ComponentManifest {
 
 func main() {
 	Component := genComponentInfo()
-	// TODO: Prepare your transport
 	transportWg := sync.WaitGroup{}
 	defer transportWg.Wait()
 	transport, _, err := transport.PrepareTransport(&Component, []string{})
@@ -77,6 +76,13 @@ func main() {
 	// TODO: Send the actual manifest
 	initFrame := transaction.GenerateInitFrame(Component)
 	transaction.RelayInitFrame(&Component, initFrame, transport)
+	// TODO: Currently triggers a crash in non debugging scenarios, as
+	serverReg, boolSuccess := transaction.RetrieveInitFrame(&Component, transport)
+	if !boolSuccess {
+		log.Println("server registration failed")
+	}
+	// TODO: Register LP here
+	log.Println(serverReg)
 
 	// TODO: Implement loop here to do the actual stuff
 }

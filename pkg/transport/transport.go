@@ -13,7 +13,7 @@ import (
 )
 
 type TransportMethod interface {
-	Transport(Component *component.Component) (bool, error)
+	Initalize(Component *component.Component) (bool, error)
 	Send(Component *component.Component) (bool, error)
 	Recv(Component *component.Component) ([]byte, bool, error)
 }
@@ -37,7 +37,7 @@ type UnsupportedTransportMethod struct {
 	Arguments []string
 }
 
-func (t *UnsupportedTransportMethod) Transport(Component *component.Component) (bool, error) {
+func (t *UnsupportedTransportMethod) Initalize(Component *component.Component) (bool, error) {
 	err := &UnsupportedTransportError{}
 	return false, err
 }
@@ -54,8 +54,10 @@ func newUnsupportedTransportMethod(arguments []string) (TransportMethod, bool, e
 	return &UnsupportedTransportMethod{"UNSUPPORTED", []string{}}, false, &UnsupportedTransportError{}
 }
 
-func (t *FileTransportMethod) Transport(Component *component.Component) (bool, error) {
+func (t *FileTransportMethod) Initalize(Component *component.Component) (bool, error) {
 	// Do your initalization stuff here for your transport
+	//   for example:
+	// filetransport.Initalize(Component)
 	return true, nil
 }
 
@@ -75,7 +77,7 @@ func (t *FileTransportMethod) Recv(Component *component.Component) ([]byte, bool
 	return data, true, nil
 }
 
-// Add transport structs, Transport(), Send(), Recv(), and new*Transport functions here
+// Add transport structs, Initalize(), Send(), Recv(), and new*Transport functions here
 
 type FileTransportMethod struct {
 	Method       string
@@ -109,6 +111,6 @@ func PrepareTransport(Component *component.Component, methodArgs []string) (Tran
 	if err != nil {
 		log.Println("invalid arguments for PrepareTransport: ", err)
 	}
-	// boolSuccess, err := TransportMethod.Transport(transport, Component)
+	// boolSuccess, err := TransportMethod.Initalize(transport, Component)
 	return transport, true, err
 }

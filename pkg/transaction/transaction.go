@@ -16,8 +16,8 @@ type initFrameArgs struct {
 }
 
 type initAckFrameArgs struct {
-	lpk  asymmetric.PublicKey
-	txid string
+	Lpk  asymmetric.PublicKey
+	Txid string
 }
 
 type RegisteredServer struct {
@@ -105,9 +105,9 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 		return lpInit, false
 	}
 	lpInit.InitArgs = lpInitArgs
-	lpInit.CurPubKey = lpInit.InitArgs.lpk
+	lpInit.CurPubKey = lpInit.InitArgs.Lpk
 	lpInit.Interface = shlyuzTransport
-	lpInit.Id = lpInit.InitArgs.txid
+	lpInit.Id = lpInitInstruction.ComponentId
 	return lpInit, true
 }
 

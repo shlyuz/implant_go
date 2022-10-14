@@ -39,6 +39,7 @@ func Send(Component *component.Component) error {
 }
 
 func Recv(Component *component.Component) ([]byte, error) {
+	// this should be a func
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatalln("failed to get user home dir: ", err)

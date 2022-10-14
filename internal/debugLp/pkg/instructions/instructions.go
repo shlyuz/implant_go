@@ -38,7 +38,7 @@ type CmdOutput struct {
 // Create an instruction frame from a passed data frame
 //
 // @param DataFrame: A dataframe to create an instruction from
-func CreateInstructionFrame(DataFrame Transaction) *InstructionFrame {
+func CreateInstructionFrame(DataFrame Transaction, includePlatInfo bool) *InstructionFrame {
 	IFrame := new(InstructionFrame)
 	IFrame.ComponentId = DataFrame.ComponentId
 	IFrame.Cmd = DataFrame.Cmd
@@ -48,6 +48,9 @@ func CreateInstructionFrame(DataFrame Transaction) *InstructionFrame {
 	} else {
 		IFrame.TxId = idgen.GenerateId()
 	}
-	IFrame.Uname = *uname.GetUname()
+	// TODO: Add a boolean to determine whether we need to send this. Don't send this to clients, do send this to teamserver
+	if includePlatInfo {
+		IFrame.Uname = *uname.GetUname()
+	}
 	return IFrame
 }

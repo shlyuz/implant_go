@@ -21,8 +21,8 @@ type implantInitFrameArgs struct {
 }
 
 type implantInitAckArgs struct {
-	lpk  asymmetric.PublicKey
-	txid string
+	Lpk  asymmetric.PublicKey
+	Txid string
 }
 
 type RegisteredClient struct {
@@ -42,7 +42,7 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 	argMap, _ := json.Marshal(argMapping)
 	initFrame.Arg = argMap
 	initFrame.ComponentId = component.Config.Id
-	instructionFrame := instructions.CreateInstructionFrame(initFrame)
+	instructionFrame := instructions.CreateInstructionFrame(initFrame, true)
 	return *instructionFrame
 }
 
@@ -129,10 +129,10 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 	if err != nil {
 		log.Println("failed to generate new keypair")
 	}
-	argMapping := implantInitAckArgs{lpk: shlyuzComponent.CurrentKeypair.PubKey, txid: implantInitInstruction.TxId}
+	argMapping := implantInitAckArgs{Lpk: shlyuzComponent.CurrentKeypair.PubKey, Txid: implantInitInstruction.TxId}
 	argMap, _ := json.Marshal(argMapping)
-	ackTransaction.Arg = argMap
-	ackInstruction = *instructions.CreateInstructionFrame(ackTransaction)
+	ackInstruction = *instructions.CreateInstructionFrame(ackTransaction, false)
+	ackInstruction.CmdArgs = string(argMap)
 	return ackInstruction, client, true
 }
 
