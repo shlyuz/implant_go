@@ -72,8 +72,14 @@ priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 	if err != nil {
 		log.Fatalln("transport failed to initalize: ", err)
 	}
+	// TODO: This is a loop per implant
 	Component.CmdChannel = make(chan []byte)
-	transaction.RetrieveInitFrame(&Component, transport)
-
-	// TODO: Receive actual manifest
+	initAckInstruction, client, boolSuccess := transaction.RetrieveInitFrame(&Component, transport)
+	if !boolSuccess {
+		log.Println("implant failed to initalize")
+		// TODO: Restart loop here
+	}
+	transaction.RelayInitFrame(&Component, initAckInstruction, transport)
+	// TODO: Register the client here
+	log.Println(client)
 }

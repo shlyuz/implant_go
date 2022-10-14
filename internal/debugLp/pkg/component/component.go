@@ -36,6 +36,7 @@ type ImplantManifest struct {
 	Implant_id       string
 	Implant_os       string
 	Implant_hostname string
+	Implant_arch     string
 }
 
 // func Rekey(frame instructions.Transaction, component Component) (Component, []byte) {
