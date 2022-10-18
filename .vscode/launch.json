@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "debug",
-            "program": "${workspaceFolder}/cmd/main/"
+            "program": "${workspaceFolder}/cmd/implant/main/"
         },
         {
             "name": "Launch Debug LP",

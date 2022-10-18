@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"log"
@@ -189,4 +190,17 @@ func RetrieveInstructionRequest(client *transport.RegisteredComponent) (instruct
 	client.CurPubKey = requestInstruction.Pk
 
 	return requestInstruction, err
+}
+
+func SendOutput(server transport.RegisteredComponent, event instructions.EventHist) instructions.Transaction {
+	var outputArgs instructions.CmdOutput
+	var OutputTransaction instructions.Transaction
+	OutputTransaction.Cmd = "fcmd"
+	OutputTransaction.ComponentId = server.Id
+	outputArgs.Ipk = server.CurPubKey
+	outputArgs.EventHistory = event
+	rawOutputArgs := new(bytes.Buffer)
+	json.NewEncoder(rawOutputArgs).Encode(outputArgs)
+	OutputTransaction.Arg = rawOutputArgs.Bytes()
+	return OutputTransaction
 }

@@ -52,7 +52,7 @@ func ParseConfig(config []byte) ShlyuzConfig {
 		log.Fatalln("failed to read config section 2: ", err)
 	}
 	compPrivKey := (*[32]byte)(hex.Decode([]byte(cryptoSec.Key("priv_key").Value())))
-	ParsedConfig.CryptoConfig.CompKeyPair.PrivKey = (*[32]byte)(compPrivKey)
+	ParsedConfig.CryptoConfig.CompKeyPair.PrivKey = (asymmetric.PublicKey)(compPrivKey)
 	ParsedConfig.CryptoConfig.CompKeyPair.PubKey = *asymmetric.PubFromPriv(ParsedConfig.CryptoConfig.CompKeyPair.PrivKey)
 	impPubKey := hex.Decode([]byte(cryptoSec.Key("imp_pk").Value()))
 	ParsedConfig.CryptoConfig.PeerPk = (*[32]byte)(impPubKey)

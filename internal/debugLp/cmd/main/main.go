@@ -34,10 +34,8 @@ func genComponentInfo(lpConfig []byte) component.Component {
 	Component.InitalKeypair = Component.CurrentKeypair
 	Component.Config = parsedConfig
 	Component.ComponentId = Component.Config.Id
-	Component.XorKey = Component.Config.CryptoConfig.XorKey
 	Component.ConfigKey = Component.Config.CryptoConfig.SymKey
 	Component.Manifest = makeManifest(Component.ComponentId)
-	Component.CurrentImpPubkey = Component.Config.CryptoConfig.PeerPk
 
 	return Component
 }
@@ -70,10 +68,10 @@ priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 	}
 
 	client.InitalKeyPair = Component.InitalKeypair
-	client.InitalPubKey = Component.CurrentImpPubkey // find a better way to do this
+	client.InitalPubKey = Component.Config.CryptoConfig.PeerPk // find a better way to do this
 	client.CurKeyPair = client.InitalKeyPair
 	client.CurPubKey = client.InitalPubKey
-	client.XorKey = Component.XorKey
+	client.XorKey = Component.Config.CryptoConfig.XorKey
 	client.TskChkTimer = Component.Config.TskChkTimer
 	client.InitSignature = Component.Config.InitSignature
 	client.SelfComponentId = Component.ComponentId
