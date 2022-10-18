@@ -20,6 +20,7 @@ type InstructionFrame struct {
 	CmdArgs     string
 	Date        string
 	TxId        string
+	Pk          asymmetric.PublicKey
 	Uname       uname.PlatformInfo
 }
 
@@ -38,7 +39,7 @@ type CmdOutput struct {
 // Create an instruction frame from a passed data frame
 //
 // @param DataFrame: A dataframe to create an instruction from
-func CreateInstructionFrame(DataFrame Transaction) *InstructionFrame {
+func CreateInstructionFrame(DataFrame Transaction, includePlatInfo bool) *InstructionFrame {
 	IFrame := new(InstructionFrame)
 	IFrame.ComponentId = DataFrame.ComponentId
 	IFrame.Cmd = DataFrame.Cmd
@@ -48,6 +49,11 @@ func CreateInstructionFrame(DataFrame Transaction) *InstructionFrame {
 	} else {
 		IFrame.TxId = idgen.GenerateTxId()
 	}
-	IFrame.Uname = *uname.GetUname()
+	if len(DataFrame.Arg) > 0 {
+		IFrame.CmdArgs = string(DataFrame.Arg)
+	}
+	if includePlatInfo {
+		IFrame.Uname = *uname.GetUname()
+	}
 	return IFrame
 }

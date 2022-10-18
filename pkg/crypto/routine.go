@@ -67,7 +67,7 @@ func PrepareSealedFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, xorKey 
 	return initMsg, ImpKeyPair
 }
 
-func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, xorKey int) ([]byte, asymmetric.AsymmetricKeyPair) {
+func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, myPrivKey asymmetric.PrivateKey, xorKey int) ([]byte, asymmetric.AsymmetricKeyPair) {
 	log.SetPrefix(logging.GetLogPrefix())
 	symMsg := symmetric.Encrypt(dataFrame)
 
@@ -97,16 +97,15 @@ func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, xorKe
 
 	hexedXorHexChunkFrame := shlyuzHex.Encode(preparedChunkFrame)
 
+	encBox := new(asymmetric.AsymmetricBox)
+	*encBox = asymmetric.Encrypt(hexedXorHexChunkFrame, lpPubKey, myPrivKey)
+	retMsg := make([]byte, len(encBox.Message)+len(encBox.IV))
+	copy(retMsg[:], encBox.IV[:])
+	copy(retMsg[len(encBox.IV):], encBox.Message)
 	ImpKeyPair, err := asymmetric.GenerateKeypair()
 	if err != nil {
 		log.Println("Unable to generate key pair")
 	}
-
-	encBox := new(asymmetric.AsymmetricBox)
-	*encBox = asymmetric.Encrypt(hexedXorHexChunkFrame, lpPubKey, ImpKeyPair.PrivKey)
-	retMsg := make([]byte, len(encBox.Message)+len(encBox.IV))
-	copy(retMsg[:], encBox.IV[:])
-	copy(retMsg[len(encBox.IV):], encBox.Message)
 
 	return retMsg, ImpKeyPair
 }
@@ -138,7 +137,7 @@ func UnwrapTransmitFrame(transmitFrame []byte, peerPubKey asymmetric.PublicKey, 
 	return recvMsg.Message
 }
 
-func UnwrapSealedFrame(transmitFrame []byte, myPrivKey asymmetric.PrivateKey, peerPubKey asymmetric.PublicKey, xorKey int, initSig []byte) []byte {
+func UnwrapSealedFrame(transmitFrame []byte, myPrivKey asymmetric.PrivateKey, myPubKey asymmetric.PublicKey, xorKey int, initSig []byte) []byte {
 	// Check for init sig and compare against expected. Strip it if it works, otherwise return a null message to signal an error
 	retrievedInitSig := make([]byte, len(initSig))
 	copy(retrievedInitSig[:], transmitFrame[:len(initSig)])
@@ -158,7 +157,7 @@ func UnwrapSealedFrame(transmitFrame []byte, myPrivKey asymmetric.PrivateKey, pe
 	decryptionBox.Message = strippedTransmitFrame[24:]
 	decryptionBox.IV = (*[24]byte)(strippedTransmitFrame[:24])
 
-	decBox, boolAsymSuccess := asymmetric.DecryptSealed(*decryptionBox, myPrivKey, peerPubKey)
+	decBox, boolAsymSuccess := asymmetric.DecryptSealed(*decryptionBox, myPrivKey, myPubKey)
 	if !boolAsymSuccess {
 		log.Println("invalidmyPrivKey transmit frame")
 	}

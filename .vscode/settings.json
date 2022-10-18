@@ -1,0 +1,6 @@
+{
+    "go.buildTags": [
+        "-tags=implant"
+    ],
+    "go.testTags": "testing"
+}

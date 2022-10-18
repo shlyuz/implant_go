@@ -7,15 +7,31 @@ import (
 	"log"
 
 	"shlyuz/pkg/component"
+	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/transport/filetransport"
 	"shlyuz/pkg/utils/idgen"
 	"shlyuz/pkg/utils/logging"
 )
 
+type RegisteredComponent struct {
+	InitalPubKey    asymmetric.PublicKey
+	InitalKeyPair   asymmetric.AsymmetricKeyPair
+	CurPubKey       asymmetric.PublicKey
+	CurKeyPair      asymmetric.AsymmetricKeyPair
+	Transport       TransportMethod
+	InitSignature   []byte
+	Id              string
+	XorKey          int
+	SelfComponentId string
+	CmdChannel      chan []byte
+	TskChkTimer     int
+	Manifest        component.ComponentManifest
+}
+
 type TransportMethod interface {
-	Initalize(Component *component.Component) (bool, error)
-	Send(Component *component.Component) (bool, error)
-	Recv(Component *component.Component) ([]byte, bool, error)
+	Initalize(Component *RegisteredComponent) (bool, error)
+	Send(CmdChannel chan []byte) (bool, error)
+	Recv(CmdChannel chan []byte) ([]byte, bool, error)
 }
 
 var transportMethods map[string]func([]string) (TransportMethod, bool, error)
@@ -37,16 +53,16 @@ type UnsupportedTransportMethod struct {
 	Arguments []string
 }
 
-func (t *UnsupportedTransportMethod) Initalize(Component *component.Component) (bool, error) {
+func (t *UnsupportedTransportMethod) Initalize(Component *RegisteredComponent) (bool, error) {
 	err := &UnsupportedTransportError{}
 	return false, err
 }
 
-func (t *UnsupportedTransportMethod) Send(Component *component.Component) (bool, error) {
+func (t *UnsupportedTransportMethod) Send(CmdChannel chan []byte) (bool, error) {
 	return false, nil
 }
 
-func (t *UnsupportedTransportMethod) Recv(Component *component.Component) ([]byte, bool, error) {
+func (t *UnsupportedTransportMethod) Recv(CmdChannel chan []byte) ([]byte, bool, error) {
 	return nil, false, nil
 }
 
@@ -54,23 +70,23 @@ func newUnsupportedTransportMethod(arguments []string) (TransportMethod, bool, e
 	return &UnsupportedTransportMethod{"UNSUPPORTED", []string{}}, false, &UnsupportedTransportError{}
 }
 
-func (t *FileTransportMethod) Initalize(Component *component.Component) (bool, error) {
+func (t *FileTransportMethod) Initalize(Component *RegisteredComponent) (bool, error) {
 	// Do your initalization stuff here for your transport
 	//   for example:
 	// filetransport.Initalize(Component)
 	return true, nil
 }
 
-func (t *FileTransportMethod) Send(Component *component.Component) (bool, error) {
-	err := filetransport.Send(Component)
+func (t *FileTransportMethod) Send(CmdChannel chan []byte) (bool, error) {
+	err := filetransport.Send(CmdChannel)
 	if err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (t *FileTransportMethod) Recv(Component *component.Component) ([]byte, bool, error) {
-	data, err := filetransport.Recv(Component)
+func (t *FileTransportMethod) Recv(CmdChannel chan []byte) ([]byte, bool, error) {
+	data, err := filetransport.Recv(CmdChannel)
 	if err != nil {
 		return nil, false, err
 	}

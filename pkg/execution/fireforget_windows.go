@@ -1,3 +1,5 @@
+//go:build implant && (!lp || !teamserver)
+
 package fireforget
 
 import (

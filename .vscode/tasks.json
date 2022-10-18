@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Set VSCode to Implant Environment (overwrites settings.json)",
+            "type": "shell",
+            "command": "rm -f .vscode/settings.json && echo ewogICAgImdvLmJ1aWxkVGFncyI6IFsKICAgICAgICAiLXRhZ3M9aW1wbGFudCIKICAgIF0sCiAgICAiZ28udGVzdFRhZ3MiOiAidGVzdGluZyIKfQo= | base64 -d > .vscode/settings.json",
+            "group": {
+                "kind": "none",
+            },
+        },
+        {
+            "label": "Set VSCode to LP Environment (overwrites settings.json)",
+            "type": "shell",
+            "command": "rm -f .vscode/settings.json && echo ewogICAgImdvLmJ1aWxkVGFncyI6IFsKICAgICAgICAiLXRhZ3M9bHAiCiAgICBdLAogICAgImdvLnRlc3RUYWdzIjogInRlc3RpbmciCn0K | base64 -d > .vscode/settings.json",
+            "group": {
+                "kind": "none",
+            },
+        }
+    ]
+}
