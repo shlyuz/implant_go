@@ -1,3 +1,5 @@
+//go:build implant && (!lp || !teamserver)
+
 package fireinteract
 
 // Module loaded, executed, and unloaded when execution ends. Can be with a return code, OR when directed by the loader.

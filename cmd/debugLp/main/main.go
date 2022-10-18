@@ -1,3 +1,5 @@
+//go:build lp && (!implant || !teamserver)
+
 package main
 
 import (
@@ -6,11 +8,11 @@ import (
 	"time"
 
 	// "shlyuz/pkg/crypto/asymmetric"
-	"shlyuz/internal/debugLp/pkg/transport"
+	"shlyuz/pkg/transport"
 
-	"shlyuz/internal/debugLp/pkg/component"
-	"shlyuz/internal/debugLp/pkg/config"
-	"shlyuz/internal/debugLp/pkg/transaction"
+	"shlyuz/pkg/component"
+	"shlyuz/pkg/config/lpconfig"
+	"shlyuz/pkg/transaction"
 	"shlyuz/pkg/utils/idgen"
 	"shlyuz/pkg/utils/logging"
 	"shlyuz/pkg/utils/uname"
@@ -27,7 +29,7 @@ func makeManifest(componentId string) component.ComponentManifest {
 
 func genComponentInfo(lpConfig []byte) component.Component {
 	var Component component.Component
-	parsedConfig := config.ParseConfig(lpConfig)
+	parsedConfig := lpconfig.ParseConfig(lpConfig)
 	log.SetPrefix(logging.GetLogPrefix())
 	log.Println("Started Shlyuz Debug LP")
 	Component.CurrentKeypair = parsedConfig.CryptoConfig.CompKeyPair

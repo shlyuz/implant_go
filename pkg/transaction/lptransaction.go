@@ -1,3 +1,5 @@
+//go:build lp && (!implant || !teamserver)
+
 package transaction
 
 import (
@@ -5,11 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"shlyuz/internal/debugLp/pkg/instructions"
-	"shlyuz/internal/debugLp/pkg/transport"
 	"shlyuz/pkg/component"
 	routine "shlyuz/pkg/crypto"
 	"shlyuz/pkg/crypto/asymmetric"
+	"shlyuz/pkg/instructions"
+	"shlyuz/pkg/transport"
 )
 
 type initFrameArgs struct {

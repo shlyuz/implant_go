@@ -5,10 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Package",
+            "name": "Launch Implant",
             "type": "go",
             "request": "launch",
             "mode": "debug",
+            "buildFlags": "-tags implant",
             "program": "${workspaceFolder}/cmd/implant/main/"
         },
         {
@@ -16,7 +17,8 @@
             "type": "go",
             "request": "launch",
             "mode": "debug",
-            "program": "${workspaceFolder}/internal/debugLp/cmd/main"
+            "buildFlags": "-tags lp",
+            "program": "${workspaceFolder}/cmd/debugLp/main"
         },
         {
             "name": "Launch Current File",
