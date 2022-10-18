@@ -17,8 +17,8 @@ type initFrameArgs struct {
 }
 
 type implantInitFrameArgs struct {
-	Manifest component.ComponentManifest `json:"Manifest"`
-	Ipk      asymmetric.PublicKey        `json:"Ipk"`
+	Manifest component.ComponentManifest
+	Ipk      asymmetric.PublicKey
 }
 
 type implantInitAckArgs struct {
