@@ -37,7 +37,7 @@ func genComponentInfo(lpConfig []byte) component.Component {
 	Component.XorKey = Component.Config.CryptoConfig.XorKey
 	Component.ConfigKey = Component.Config.CryptoConfig.SymKey
 	Component.Manifest = makeManifest(Component.ComponentId)
-	Component.CurrentImpPubkey = Component.Config.CryptoConfig.ImplantPk
+	Component.CurrentImpPubkey = Component.Config.CryptoConfig.PeerPk
 
 	return Component
 }

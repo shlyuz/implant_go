@@ -12,24 +12,25 @@ import (
 	"shlyuz/pkg/encoding/xor"
 )
 
-type YadroCrypto struct {
-	LpPk        asymmetric.PublicKey
+type ShlyuzCrypto struct {
+	PeerPk      asymmetric.PublicKey
 	SymKey      []byte
 	XorKey      int
-	CompKeypair asymmetric.AsymmetricKeyPair
+	CompKeyPair asymmetric.AsymmetricKeyPair
 }
 
-type YadroConfig struct {
+type ShlyuzConfig struct {
 	Id            string
 	TransportName string
 	TskChkTimer   int
 	InitSignature []byte
-	CryptoConfig  YadroCrypto
+	CryptoConfig  ShlyuzCrypto
 }
 
 // Parses a given config from bytes
-func ParseConfig(config []byte) YadroConfig {
-	var ParsedConfig YadroConfig
+func ParseConfig(config []byte) ShlyuzConfig {
+	// TODO: Parse Transport Configuration - #? TransportConfig
+	var ParsedConfig ShlyuzConfig
 	cfg, err := ini.Load(config)
 	if err != nil {
 		log.Fatalln("failed to load config: ", err)
@@ -52,10 +53,10 @@ func ParseConfig(config []byte) YadroConfig {
 		log.Fatalln("failed to read config section 2: ", err)
 	}
 	compPrivKey := (*[32]byte)(hex.Decode([]byte(cryptoSec.Key("priv_key").Value())))
-	ParsedConfig.CryptoConfig.CompKeypair.PrivKey = (*[32]byte)(compPrivKey)
-	ParsedConfig.CryptoConfig.CompKeypair.PubKey = *asymmetric.PubFromPriv(ParsedConfig.CryptoConfig.CompKeypair.PrivKey)
+	ParsedConfig.CryptoConfig.CompKeyPair.PrivKey = (*[32]byte)(compPrivKey)
+	ParsedConfig.CryptoConfig.CompKeyPair.PubKey = *asymmetric.PubFromPriv(ParsedConfig.CryptoConfig.CompKeyPair.PrivKey)
 	lpPubKey := (*[32]byte)(hex.Decode([]byte(cryptoSec.Key("lp_pk").Value())))
-	ParsedConfig.CryptoConfig.LpPk = (*[32]byte)(lpPubKey)
+	ParsedConfig.CryptoConfig.PeerPk = (*[32]byte)(lpPubKey)
 	ParsedConfig.CryptoConfig.SymKey = []byte(cryptoSec.Key("sym_key").Value())
 	xor64Key, err := strconv.ParseInt(cryptoSec.Key("xor_key").Value(), 0, 64)
 	if err != nil {

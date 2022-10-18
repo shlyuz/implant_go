@@ -14,7 +14,7 @@ type Component struct {
 	// logger             log.Logger
 	ConfigFile         string
 	ConfigKey          []byte
-	Config             config.LpConfig
+	Config             config.ShlyuzConfig
 	ComponentId        string
 	Manifest           ComponentManifest
 	InitalKeypair      asymmetric.AsymmetricKeyPair

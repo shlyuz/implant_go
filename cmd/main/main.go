@@ -53,8 +53,8 @@ func genComponentInfo() component.Component {
 	YadroComponent.Config.InitSignature = parsedConfig.InitSignature
 	YadroComponent.Config.TskChkTimer = parsedConfig.TskChkTimer
 	YadroComponent.Config.CryptoConfig = parsedConfig.CryptoConfig
-	YadroComponent.InitalKeypair = YadroComponent.Config.CryptoConfig.CompKeypair
-	YadroComponent.InitalRemotePubkey = parsedConfig.CryptoConfig.LpPk
+	YadroComponent.InitalKeypair = YadroComponent.Config.CryptoConfig.CompKeyPair
+	YadroComponent.InitalRemotePubkey = parsedConfig.CryptoConfig.PeerPk
 	YadroComponent.ConfigKey = componentConfig.Key
 	YadroComponent.Manifest = makeManifest(YadroComponent.Config.Id)
 

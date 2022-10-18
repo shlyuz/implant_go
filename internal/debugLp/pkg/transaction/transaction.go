@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"shlyuz/internal/debugLp/pkg/component"
 	"shlyuz/internal/debugLp/pkg/instructions"
 	"shlyuz/internal/debugLp/pkg/transport"
+	"shlyuz/pkg/component"
 	routine "shlyuz/pkg/crypto"
 	"shlyuz/pkg/crypto/asymmetric"
 )
@@ -17,8 +17,8 @@ type initFrameArgs struct {
 }
 
 type implantInitFrameArgs struct {
-	Manifest component.ImplantManifest `json:"Manifest"`
-	Ipk      asymmetric.PublicKey      `json:"Ipk"`
+	Manifest component.ComponentManifest `json:"Manifest"`
+	Ipk      asymmetric.PublicKey        `json:"Ipk"`
 }
 
 type implantInitAckArgs struct {

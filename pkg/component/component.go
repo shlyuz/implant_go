@@ -14,7 +14,7 @@ type Component struct {
 	// logger             log.Logger
 	ConfigFile         string
 	ConfigKey          []byte
-	Config             config.YadroConfig
+	Config             config.ShlyuzConfig
 	ComponentId        string
 	Manifest           ComponentManifest
 	InitalKeypair      asymmetric.AsymmetricKeyPair
@@ -36,7 +36,7 @@ func Rekey(frame instructions.Transaction, component Component) (Component, []by
 	rawRekeyFrame := instructions.CreateInstructionFrame(frame, true)
 	rawFrameBytes := new(bytes.Buffer)
 	json.NewEncoder(rawFrameBytes).Encode(rawRekeyFrame)
-	rekeyFrame, newComponentKeypair := routine.PrepareTransmitFrame(rawFrameBytes.Bytes(), component.Config.CryptoConfig.LpPk, component.CurrentKeypair.PrivKey, component.Config.CryptoConfig.XorKey)
+	rekeyFrame, newComponentKeypair := routine.PrepareTransmitFrame(rawFrameBytes.Bytes(), component.Config.CryptoConfig.PeerPk, component.CurrentKeypair.PrivKey, component.Config.CryptoConfig.XorKey)
 	return component, rekeyFrame, newComponentKeypair
 }
 

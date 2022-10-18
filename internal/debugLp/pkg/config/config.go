@@ -12,38 +12,24 @@ import (
 	"shlyuz/pkg/encoding/xor"
 )
 
-type YadroCrypto struct {
-	LpPk        asymmetric.PublicKey
-	SymKey      []byte
-	XorKey      int
-	CompKeypair asymmetric.AsymmetricKeyPair
-}
-
-type YadroConfig struct {
-	Id            string
-	TransportName string
-	TskChkTimer   int
-	InitSignature []byte
-	CryptoConfig  YadroCrypto
-}
-
-type LpCrypto struct {
-	ImplantPk   asymmetric.PublicKey
+type ShlyuzCrypto struct {
+	PeerPk      asymmetric.PublicKey
 	SymKey      []byte
 	XorKey      int
 	CompKeyPair asymmetric.AsymmetricKeyPair
 }
 
-type LpConfig struct {
+type ShlyuzConfig struct {
 	Id            string
 	TransportName string
 	TskChkTimer   int
 	InitSignature []byte
-	CryptoConfig  LpCrypto
+	CryptoConfig  ShlyuzCrypto
 }
 
-func ParseConfig(config []byte) LpConfig {
-	var ParsedConfig LpConfig
+func ParseConfig(config []byte) ShlyuzConfig {
+	// TODO: Parse Transport Configuration - #? TransportConfig
+	var ParsedConfig ShlyuzConfig
 	cfg, err := ini.Load(config)
 	if err != nil {
 		log.Fatalln("failed to load config: ", err)
@@ -69,7 +55,7 @@ func ParseConfig(config []byte) LpConfig {
 	ParsedConfig.CryptoConfig.CompKeyPair.PrivKey = (*[32]byte)(compPrivKey)
 	ParsedConfig.CryptoConfig.CompKeyPair.PubKey = *asymmetric.PubFromPriv(ParsedConfig.CryptoConfig.CompKeyPair.PrivKey)
 	impPubKey := hex.Decode([]byte(cryptoSec.Key("imp_pk").Value()))
-	ParsedConfig.CryptoConfig.ImplantPk = (*[32]byte)(impPubKey)
+	ParsedConfig.CryptoConfig.PeerPk = (*[32]byte)(impPubKey)
 	ParsedConfig.CryptoConfig.SymKey = []byte(cryptoSec.Key("sym_key").Value())
 	xor64Key, err := strconv.ParseInt(cryptoSec.Key("xor_key").Value(), 0, 64)
 	if err != nil {
