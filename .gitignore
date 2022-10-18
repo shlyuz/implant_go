@@ -1,4 +1,8 @@
 configs/shlyuz.conf
 configs/symkey
 cmd/main/*
+build/
+!build/implant
+!build/lp
+!build/teamserver
 !cmd/main/main.go

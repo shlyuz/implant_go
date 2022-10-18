@@ -16,6 +16,22 @@
             "group": {
                 "kind": "none",
             },
-        }
+        },
+        {
+            "label": "Build Implant",
+            "type": "shell",
+            "command": "go build -tags=implant -o build/implant ./cmd/implant/main/",
+            "group": {
+                "kind": "build",
+            },
+        },
+        {
+            "label": "Build Listening Post",
+            "type": "shell",
+            "command": "go build -tags=lp -o build/lp ./cmd/debugLp/main/",
+            "group": {
+                "kind": "build",
+            },
+        },
     ]
 }
