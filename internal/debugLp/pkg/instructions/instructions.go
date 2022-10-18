@@ -20,6 +20,7 @@ type InstructionFrame struct {
 	CmdArgs     string
 	Date        string
 	TxId        string
+	Pk          asymmetric.PublicKey
 	Uname       uname.PlatformInfo
 }
 
@@ -47,6 +48,9 @@ func CreateInstructionFrame(DataFrame Transaction, includePlatInfo bool) *Instru
 		IFrame.TxId = DataFrame.TxId
 	} else {
 		IFrame.TxId = idgen.GenerateTxId()
+	}
+	if len(DataFrame.Arg) > 0 {
+		IFrame.CmdArgs = string(DataFrame.Arg)
 	}
 	// TODO: Add a boolean to determine whether we need to send this. Don't send this to clients, do send this to teamserver
 	if includePlatInfo {

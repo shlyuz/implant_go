@@ -3,7 +3,6 @@ package filetransport
 import (
 	"log"
 	"os"
-	"shlyuz/internal/debugLp/pkg/component"
 )
 
 type TransportInfo struct {
@@ -26,9 +25,9 @@ func getPath() string {
 	return channelPath
 }
 
-func Send(Component *component.Component) error {
-	err := func(shlyuzComponent *component.Component) error {
-		data := <-shlyuzComponent.CmdChannel
+func Send(CmdChannel chan []byte) error {
+	err := func(CmdChannel chan []byte) error {
+		data := <-CmdChannel
 		channelPath := getPath()
 		for {
 			check_file, err := os.Stat(channelPath)
@@ -45,16 +44,16 @@ func Send(Component *component.Component) error {
 		if err != nil {
 			log.Println("something went wrong: ", err)
 		}
-		close(shlyuzComponent.CmdChannel)
+		close(CmdChannel)
 		return err
-	}(Component)
+	}(CmdChannel)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func Recv(Component *component.Component) ([]byte, error) {
+func Recv(CmdChannel chan []byte) ([]byte, error) {
 	channelPath := getPath()
 	// read the contents of the file
 	data, err := os.ReadFile(channelPath)

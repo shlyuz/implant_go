@@ -26,7 +26,7 @@ func getPath() string {
 }
 
 func Send(CmdChannel chan []byte) error {
-	err := func(chan []byte) error {
+	err := func(CmdChannel chan []byte) error {
 		data := <-CmdChannel
 		channelPath := getPath()
 		for {

