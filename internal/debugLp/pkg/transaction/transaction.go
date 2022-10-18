@@ -27,8 +27,8 @@ type implantInitAckArgs struct {
 }
 
 type reqCmdArgs struct {
-	ipk  asymmetric.PublicKey
-	txId string
+	Ipk  asymmetric.PublicKey
+	TxId string
 }
 
 type RegisteredClient struct {
@@ -82,12 +82,12 @@ func readFromChannel(channel chan []byte) []byte {
 
 func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions.InstructionFrame, shlyuzTransport transport.TransportMethod) *component.Component {
 	frameMap, _ := json.Marshal(initFrame)
-	transmitFrame, frameKeyPair := routine.PrepareSealedFrame(frameMap, shlyuzComponent.CurrentImpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
-	shlyuzComponent.CurrentKeypair = frameKeyPair
+	transmitFrame, _ := routine.PrepareSealedFrame(frameMap, shlyuzComponent.CurrentImpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	// shlyuzComponent.CurrentKeypair = frameKeyPair
 	go writeToChannel(shlyuzComponent.CmdChannel, transmitFrame)
 	// TODO: Do the relaying and retreive the ackFrame
 	boolSuccess, err := shlyuzTransport.Send(shlyuzComponent)
-	if boolSuccess == false {
+	if !boolSuccess {
 		log.Fatalln("failed to send init: ", err)
 	}
 	log.Println("Sent init frame.")
@@ -102,7 +102,7 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 		log.Println("failed to receive from channel: ", err)
 		return ackInstruction, client, false
 	}
-	implantInitFrame := routine.UnwrapSealedFrame(data, shlyuzComponent.InitalKeypair.PrivKey, shlyuzComponent.InitalKeypair.PubKey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	implantInitFrame := routine.UnwrapSealedFrame(data, shlyuzComponent.CurrentKeypair.PrivKey, shlyuzComponent.CurrentKeypair.PubKey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
 	if implantInitFrame == nil {
 		log.Println("failed to decode initalization frame: ", err)
 		return ackInstruction, client, false
@@ -142,10 +142,8 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 	ackTransaction.TxId = implantInitInstruction.TxId
 	// TODO: This is a keypair that is unique to the implant
 	// Generate a new keypair for the LP to use
-	client.CurKeyPair, err = asymmetric.GenerateKeypair()
-	if err != nil {
-		log.Println("failed to generate new keypair")
-	}
+	client.CurKeyPair = shlyuzComponent.CurrentKeypair
+	// client.CurPubKey = shlyuzComponent.CurrentImpPubkey
 	argMapping := implantInitAckArgs{Lpk: shlyuzComponent.CurrentKeypair.PubKey, Txid: implantInitInstruction.TxId}
 	argMap, _ := json.Marshal(argMapping)
 	ackInstruction = *instructions.CreateInstructionFrame(ackTransaction, false)
@@ -156,11 +154,11 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 func RetrieveInstructionRequest(shlyuzComponent *component.Component, client *RegisteredClient) (instructions.InstructionFrame, error) {
 	var requestInstruction instructions.InstructionFrame
 	data, boolSuccess, err := client.Interface.Recv(shlyuzComponent)
-	if boolSuccess == false {
+	if !boolSuccess {
 		log.Println("failed to receive from channel: ", err)
 		return requestInstruction, err
 	}
-	requestData := routine.UnwrapSealedFrame(data, shlyuzComponent.CurrentKeypair.PrivKey, shlyuzComponent.CurrentImpPubkey, shlyuzComponent.XorKey, shlyuzComponent.Config.InitSignature)
+	requestData := routine.UnwrapTransmitFrame(data, shlyuzComponent.CurrentImpPubkey, shlyuzComponent.CurrentKeypair.PrivKey, shlyuzComponent.XorKey)
 	if requestData == nil {
 		log.Println("failed to decode instruction frame: ", err)
 		return requestInstruction, errors.New("invalid instruction frame")
@@ -170,11 +168,15 @@ func RetrieveInstructionRequest(shlyuzComponent *component.Component, client *Re
 	// We need to parse the args and extract the crypto key
 	// TODO: This should go to a command router
 	var instructionCmdArgs reqCmdArgs
-	err = json.Unmarshal([]byte(requestInstruction.CmdArgs), instructionCmdArgs)
+	client.CurKeyPair, err = asymmetric.GenerateKeypair()
 	if err != nil {
-		log.Println("failed to ")
+		log.Println("failed to generate new keypair")
 	}
-	client.CurPubKey = instructionCmdArgs.ipk
+	err = json.Unmarshal([]byte(requestInstruction.CmdArgs), &instructionCmdArgs)
+	if err != nil {
+		log.Println("failed to unmarshal")
+	}
+	client.CurPubKey = instructionCmdArgs.Ipk
 
 	return requestInstruction, err
 }
