@@ -94,8 +94,6 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions.InstructionFrame, shlyuzTransport transport.TransportMethod) *component.Component {
 	frameMap, _ := json.Marshal(initFrame)
 	transmitFrame, _ := routine.PrepareSealedFrame(frameMap, shlyuzComponent.InitalRemotePubkey, shlyuzComponent.Config.CryptoConfig.XorKey, shlyuzComponent.Config.InitSignature)
-	// shlyuzComponent.CurrentKeypair = frameKeyPair
-	// TODO: We can actually generate a new keypair here for the server and return it - #? KEYROAT
 	shlyuzComponent.TmpChannel = make(chan []byte)
 	go writeToChannel(shlyuzComponent.TmpChannel, transmitFrame)
 	boolSuccess, err := shlyuzTransport.Send(shlyuzComponent.TmpChannel)
@@ -134,13 +132,7 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 		return lpInit, false
 	}
 
-	// var lpInitArgs initAckFrameArgs
-	// err = json.Unmarshal([]byte(lpInitInstruction.CmdArgs), &lpInitArgs)
-	// if err != nil {
-	// 	log.Println("[WARNING] failed to decode init args: ", err)
-	// 	return lpInit, false
-	// }
-	lpInit.CurPubKey = lpInitInstruction.Pk // TODO: We can rotate keys here - #? KEYROAT
+	lpInit.CurPubKey = lpInitInstruction.Pk
 	lpInit.Transport = shlyuzTransport
 	lpInit.Id = lpInitInstruction.ComponentId
 	lpInit.SelfComponentId = shlyuzComponent.ComponentId
@@ -153,23 +145,10 @@ func GenerateRequestInstruction(server *transport.RegisteredComponent) instructi
 	var transactionFrame instructions.Transaction
 
 	transactionFrame.Cmd = "icmdr"
-	// retKeyPair, err := asymmetric.GenerateKeypair()
-	// if err != nil {
-	// 	log.Println("failed to generate new keys")
-	// }
-	// Don't need to use this for instruction requests
-	// var rCmdArgs reqCmdArgs
-	// rCmdArgs.Ipk = retKeyPair.PubKey
-	// rCmdArgs.TxId = idgen.GenerateTxId()
-	// argMap, _ := json.Marshal(rCmdArgs)
-	// transactionFrame.Arg = argMap
-	// transactionFrame.TxId = rCmdArgs.TxId
 	transactionFrame.ComponentId = server.SelfComponentId
 
 	instructionFrame := instructions.CreateInstructionFrame(transactionFrame, true)
-	// instructionFrame.Pk = retKeyPair.PubKey
 	instructionFrame.TxId = idgen.GenerateTxId()
-	// server.CurKeyPair = retKeyPair
 	return *instructionFrame
 }
 
@@ -196,7 +175,6 @@ func RetrieveInstruction(server *transport.RegisteredComponent) (instructions.In
 	}
 	instructionData := routine.UnwrapTransmitFrame(data, server.CurPubKey, server.InitalKeyPair.PrivKey, server.XorKey)
 	instruction = decodeTransactionFrame(instructionData)
-	// TODO: Send instruction frame to command router
 
 	return instruction, nil
 }

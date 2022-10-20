@@ -65,7 +65,6 @@ func registerClient(Component *component.Component) transport.RegisteredComponen
 		// TODO: Restart loop here
 	}
 	transaction.RelayInitFrame(&client, initAckInstruction)
-	// TODO: Client is now considered registerd
 	log.Println(client)
 
 	return client
@@ -73,7 +72,6 @@ func registerClient(Component *component.Component) transport.RegisteredComponen
 
 func clientLoop(client *transport.RegisteredComponent) {
 	for {
-		// TODO: Do I need to recieve the client here, or does the KP update?
 		instructionRequestFrame, err := transaction.RetrieveInstructionRequest(client) // Depending if we have something in the Queue for this implant, we'll relay an instruction. This should go to a router of some srot
 		if err != nil {
 			log.Println("invalid instruction received: ")
@@ -112,17 +110,14 @@ xor_key = 0x6d
 priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 	Component := genComponentInfo(lpConfig)
 	// This is the start of the registration process for a client
-	// TODO: This is a loop per implant
-	// transportWg := sync.WaitGroup{}
-	// defer transportWg.Wait()
 
-	// This client is now considered registered
 	// TODO: In a for loop for every expected client, run a goroutine, append to clients
 	// client := go registerClient(&Component)
 	client := registerClient(&Component) // TODO: Be concurrent, call runclient inside this goroutine
 	clients = append(clients, client)    // TODO: Put me inside the concurrent goroutine
 
 	wg := sync.WaitGroup{}
+	//  as an LP, we are awaiting a request for a command from an implant, which is then relayed to TS, where we get a command etc
 	for index, registeredClient := range clients {
 		log.Println("Registered ", index, "clients")
 		log.Println("Starting execution for ", registeredClient.Id)
@@ -134,6 +129,4 @@ priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 		select {}
 	} //run forever
 
-	// TODO: Implement loop here to do the actual stuff
-	//  as an LP, we are awaiting a request for a command from an implant, which is then relayed to TS, where we get a command etc
 }

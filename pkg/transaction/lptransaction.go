@@ -86,7 +86,10 @@ func RouteClientInstruction(client *transport.RegisteredComponent, instruction i
 
 	switch cmd := instruction.Cmd; cmd {
 	case "icmdr":
-		// RelayCmdRequest(&client, instruction)
+		// tsCmdReqRelayInstruction = GenerateCmdReqRelayInstruction
+		// RelayCmdRequest(&server, tsCmdReqRelayInstruction) // to the teamserver
+		// CmdForwardInstruction = RetrieveCmdReqAck(&server)
+		// generatedInstruction = GenerateForwardCmd(client, CmdForwardInstruction)
 		generatedInstruction = GenerateForwardCmd(client)
 	}
 
@@ -114,9 +117,6 @@ func RelayInitFrame(client *transport.RegisteredComponent, initFrame instruction
 
 	frameMap, _ := json.Marshal(initFrame)
 	transmitFrame, _ := routine.PrepareSealedFrame(frameMap, client.CurPubKey, client.XorKey, client.InitSignature)
-	// client.CurKeyPair = frameKeyPair
-	// TODO: We can rotate keys here for ourselves - #? KEYROAT
-	// Generate a new keypair for the LP to use
 	client.CmdChannel = make(chan []byte)
 	go writeToChannel(client.CmdChannel, transmitFrame)
 	boolSuccess, err := client.Transport.Send(client.CmdChannel)
@@ -161,7 +161,7 @@ func RetrieveInitFrame(client *transport.RegisteredComponent) (instructions.Inst
 		return ackInstruction, *client, false
 	}
 
-	client.CurPubKey = implantInitInstruction.Pk // TODO: We can rotate keys here - #? KEYROAT
+	client.CurPubKey = implantInitInstruction.Pk
 	client.Id = implantInitInstruction.ComponentId
 
 	// Prepares ack frame
@@ -169,12 +169,8 @@ func RetrieveInitFrame(client *transport.RegisteredComponent) (instructions.Inst
 	ackTransaction.Cmd = "ipi"
 	ackTransaction.ComponentId = client.SelfComponentId
 	ackTransaction.TxId = implantInitInstruction.TxId
-	// TODO: This is a keypair that is unique to the implant
-	// argMapping := implantInitAckArgs{Lpk: client.CurKeyPair.PubKey, Txid: implantInitInstruction.TxId}
-	// argMap, _ := json.Marshal(argMapping)
 	ackInstruction = *instructions.CreateInstructionFrame(ackTransaction, false)
 	ackInstruction.Pk = client.CurKeyPair.PubKey
-	// ackInstruction.CmdArgs = string(argMap)
 	return ackInstruction, *client, true
 }
 
@@ -193,17 +189,6 @@ func RetrieveInstructionRequest(client *transport.RegisteredComponent) (instruct
 	requestInstruction = decodeInstructionFrame(requestData)
 
 	// TODO: Send Instruction Frame to command router
-
-	// client.CurKeyPair, err = asymmetric.GenerateKeypair()
-	// if err != nil {
-	// 	log.Println("failed to generate new keypair")
-	// }
-	// Don't need to use this for instruction requests
-	// var instructionCmdArgs reqCmdArgs
-	// err = json.Unmarshal([]byte(requestInstruction.CmdArgs), &instructionCmdArgs)
-	// if err != nil {
-	// 	log.Println("failed to unmarshal")
-	// }
 	client.CurPubKey = requestInstruction.Pk
 
 	return requestInstruction, err

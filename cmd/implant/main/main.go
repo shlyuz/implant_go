@@ -87,8 +87,7 @@ func registerServer(Component component.Component) transport.RegisteredComponent
 	if !boolSuccess {
 		log.Fatalln("server registration failed")
 	}
-	// TODO: Register LP here
-	log.Println(serverReg)
+	log.Println(serverReg) //debug
 	return serverReg
 }
 
