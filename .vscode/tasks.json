@@ -4,34 +4,36 @@
         {
             "label": "Set VSCode to Implant Environment (overwrites settings.json)",
             "type": "shell",
-            "command": "rm -f .vscode/settings.json && echo ewogICAgImdvLmJ1aWxkVGFncyI6IFsKICAgICAgICAiLXRhZ3M9aW1wbGFudCIKICAgIF0sCiAgICAiZ28udGVzdFRhZ3MiOiAidGVzdGluZyIKfQo= | base64 -d > .vscode/settings.json",
+            "command": "rm -f .vscode/settings.json && echo ewogICAgImdvLmJ1aWxkRmxhZ3MiOiBbCiAgICAgICAgIi10YWdzPWltcGxhbnQiCiAgICBdLAogICAgImdvLnRlc3RUYWdzIjogInRlc3RpbmciCn0K | base64 -d > .vscode/settings.json",
             "group": {
-                "kind": "none",
+                "kind": "none"
             },
+            "problemMatcher": []
         },
         {
             "label": "Set VSCode to LP Environment (overwrites settings.json)",
             "type": "shell",
-            "command": "rm -f .vscode/settings.json && echo ewogICAgImdvLmJ1aWxkVGFncyI6IFsKICAgICAgICAiLXRhZ3M9bHAiCiAgICBdLAogICAgImdvLnRlc3RUYWdzIjogInRlc3RpbmciCn0K | base64 -d > .vscode/settings.json",
+            "command": "rm -f .vscode/settings.json && echo ewogICAgImdvLmJ1aWxkRmxhZ3MiOiBbCiAgICAgICAgIi10YWdzPWxwIgogICAgXSwKICAgICJnby50ZXN0VGFncyI6ICJ0ZXN0aW5nIgp9Cg== | base64 -d > .vscode/settings.json",
             "group": {
-                "kind": "none",
+                "kind": "none"
             },
+            "problemMatcher": []
         },
         {
             "label": "Build Implant",
             "type": "shell",
             "command": "go build -tags=implant -o build/implant ./cmd/implant/main/",
             "group": {
-                "kind": "build",
-            },
+                "kind": "build"
+            }
         },
         {
             "label": "Build Listening Post",
             "type": "shell",
             "command": "go build -tags=lp -o build/lp ./cmd/debugLp/main/",
             "group": {
-                "kind": "build",
-            },
-        },
+                "kind": "build"
+            }
+        }
     ]
 }

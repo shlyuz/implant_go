@@ -1,5 +1,5 @@
 {
-    "go.buildTags": [
+    "go.buildFlags": [
         "-tags=implant"
     ],
     "go.testTags": "testing"

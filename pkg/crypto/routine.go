@@ -19,7 +19,7 @@ type EncryptedFrame struct {
 	Chunk_len int
 }
 
-func PrepareSealedFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, xorKey int, initSig []byte) ([]byte, asymmetric.AsymmetricKeyPair) {
+func PrepareSealedFrame(dataFrame []byte, peerPubKey asymmetric.PublicKey, xorKey int, initSig []byte) ([]byte, asymmetric.AsymmetricKeyPair) {
 	log.SetPrefix(logging.GetLogPrefix())
 	symMsg := symmetric.Encrypt(dataFrame)
 
@@ -55,7 +55,7 @@ func PrepareSealedFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, xorKey 
 	}
 
 	encBox := new(asymmetric.AsymmetricBox)
-	*encBox = asymmetric.EncryptSealed(hexedXorHexChunkFrame, lpPubKey)
+	*encBox = asymmetric.EncryptSealed(hexedXorHexChunkFrame, peerPubKey)
 	retMsg := make([]byte, len(encBox.Message)+len(encBox.IV))
 	copy(retMsg[:], encBox.IV[:])
 	copy(retMsg[len(encBox.IV):], encBox.Message)
@@ -67,7 +67,7 @@ func PrepareSealedFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, xorKey 
 	return initMsg, ImpKeyPair
 }
 
-func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, myPrivKey asymmetric.PrivateKey, xorKey int) ([]byte, asymmetric.AsymmetricKeyPair) {
+func PrepareTransmitFrame(dataFrame []byte, peerPubKey asymmetric.PublicKey, myPrivKey asymmetric.PrivateKey, xorKey int) ([]byte, asymmetric.AsymmetricKeyPair) {
 	log.SetPrefix(logging.GetLogPrefix())
 	symMsg := symmetric.Encrypt(dataFrame)
 
@@ -98,7 +98,7 @@ func PrepareTransmitFrame(dataFrame []byte, lpPubKey asymmetric.PublicKey, myPri
 	hexedXorHexChunkFrame := shlyuzHex.Encode(preparedChunkFrame)
 
 	encBox := new(asymmetric.AsymmetricBox)
-	*encBox = asymmetric.Encrypt(hexedXorHexChunkFrame, lpPubKey, myPrivKey)
+	*encBox = asymmetric.Encrypt(hexedXorHexChunkFrame, peerPubKey, myPrivKey)
 	retMsg := make([]byte, len(encBox.Message)+len(encBox.IV))
 	copy(retMsg[:], encBox.IV[:])
 	copy(retMsg[len(encBox.IV):], encBox.Message)

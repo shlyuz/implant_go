@@ -11,7 +11,8 @@ import (
 	"shlyuz/pkg/component"
 	"shlyuz/pkg/config"
 	"shlyuz/pkg/config/vzhivlyatconfig"
-	"shlyuz/pkg/crypto/asymmetric"
+
+	// "shlyuz/pkg/crypto/asymmetric"
 	"shlyuz/pkg/instructions"
 	"shlyuz/pkg/transaction"
 	"shlyuz/pkg/transport"
@@ -74,42 +75,50 @@ func makeManifest(componentId string) component.ComponentManifest {
 	return generatedManifest
 }
 
-func main() {
-	Component := genComponentInfo()
-	transportWg := sync.WaitGroup{}
-	defer transportWg.Wait()
+func registerServer(Component component.Component) transport.RegisteredComponent {
+	var serverReg transport.RegisteredComponent
 	transport, _, err := transport.PrepareTransport(&Component, []string{})
 	if err != nil {
 		log.Fatalln("transport failed to initalize: ", err)
 	}
-
 	initFrame := transaction.GenerateInitFrame(Component)
 	transaction.RelayInitFrame(&Component, initFrame, transport)
 	serverReg, boolSuccess := transaction.RetrieveInitFrame(&Component, transport)
 	if !boolSuccess {
-		log.Println("server registration failed")
+		log.Fatalln("server registration failed")
 	}
 	// TODO: Register LP here
 	log.Println(serverReg)
+	return serverReg
+}
 
-	// TODO: Implement loop here to do the actual stuff
-	//  first we send a request for a command, then we retrieve a response
+func run(server *transport.RegisteredComponent) {
 	for {
 		var instructionRequestFrame instructions.InstructionFrame
-		var newKeyPair asymmetric.AsymmetricKeyPair
-		instructionRequestFrame, newKeyPair = transaction.RequestInstruction(&serverReg)
-		transaction.RelayInstructionFrame(&serverReg, instructionRequestFrame)
-		serverReg.CurKeyPair = newKeyPair
-		instructionFrame, err := transaction.RetrieveInstruction(&serverReg)
+		// var newKeyPair asymmetric.AsymmetricKeyPair
+		instructionRequestFrame = transaction.GenerateRequestInstruction(server)
+		transaction.RelayInstructionFrame(server, instructionRequestFrame)
+		// server.CurKeyPair = newKeyPair
+		instructionFrame, err := transaction.RetrieveInstruction(server)
 		log.Println(instructionFrame) // debug
 		if err != nil {
 			log.Println("invalid instruction received: ")
 			log.Println(err)
-			time.Sleep(time.Duration(Component.Config.TskChkTimer))
+			time.Sleep(time.Duration(server.TskChkTimer))
 			break
 		}
 		// TODO: Process instruction
-		time.Sleep(time.Duration(Component.Config.TskChkTimer))
+		transaction.RouteInstruction(server, instructionFrame)
+		time.Sleep(time.Duration(server.TskChkTimer))
 		break
 	}
+
+}
+
+func main() {
+	Component := genComponentInfo()
+	// transportWg := sync.WaitGroup{}
+	// defer transportWg.Wait()
+	serverReg := registerServer(Component)
+	run(&serverReg)
 }

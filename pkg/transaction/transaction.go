@@ -70,6 +70,15 @@ func rekey(frame routine.EncryptedFrame) {
 
 }
 
+func RouteInstruction(server *transport.RegisteredComponent, instruction instructions.InstructionFrame) {
+	var generatedInstruction instructions.InstructionFrame
+
+	switch cmd := instruction.Cmd; cmd {
+	case "rcmda":
+		log.Println(generatedInstruction) // TODO: Do something with this requested command
+	}
+}
+
 func GenerateInitFrame(component component.Component) instructions.InstructionFrame {
 	var initFrame instructions.Transaction
 	var initArgs initFrameArgs
@@ -95,19 +104,6 @@ func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions
 	}
 	log.Println("Sent init frame.")
 	return shlyuzComponent
-}
-
-func RelayInstructionFrame(server *transport.RegisteredComponent, instruction instructions.InstructionFrame) *transport.RegisteredComponent {
-	dataFrame, _ := json.Marshal(instruction)
-	transmitFrame, _ := routine.PrepareTransmitFrame(dataFrame, server.CurPubKey, server.CurKeyPair.PrivKey, server.XorKey)
-	// server.CurKeyPair = frameKeyPair
-	go writeToChannel(server.CmdChannel, transmitFrame)
-	boolSuccess, err := server.Transport.Send(server.CmdChannel)
-	if !boolSuccess {
-		log.Fatalln("failed to send instruction: ", err)
-	}
-	log.Println("sent instruction")
-	return server
 }
 
 func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport transport.TransportMethod) (transport.RegisteredComponent, bool) {
@@ -144,14 +140,51 @@ func RetrieveInitFrame(shlyuzComponent *component.Component, shlyuzTransport tra
 	// 	log.Println("[WARNING] failed to decode init args: ", err)
 	// 	return lpInit, false
 	// }
-	lpInit.InitalPubKey = lpInitInstruction.Pk
-	lpInit.CurPubKey = lpInit.InitalPubKey // TODO: We can rotate keys here - #? KEYROAT
+	lpInit.CurPubKey = lpInitInstruction.Pk // TODO: We can rotate keys here - #? KEYROAT
 	lpInit.Transport = shlyuzTransport
 	lpInit.Id = lpInitInstruction.ComponentId
 	lpInit.SelfComponentId = shlyuzComponent.ComponentId
 	lpInit.XorKey = shlyuzComponent.Config.CryptoConfig.XorKey
 	lpInit.InitSignature = shlyuzComponent.Config.InitSignature
 	return lpInit, true
+}
+
+func GenerateRequestInstruction(server *transport.RegisteredComponent) instructions.InstructionFrame {
+	var transactionFrame instructions.Transaction
+
+	transactionFrame.Cmd = "icmdr"
+	// retKeyPair, err := asymmetric.GenerateKeypair()
+	// if err != nil {
+	// 	log.Println("failed to generate new keys")
+	// }
+	// Don't need to use this for instruction requests
+	// var rCmdArgs reqCmdArgs
+	// rCmdArgs.Ipk = retKeyPair.PubKey
+	// rCmdArgs.TxId = idgen.GenerateTxId()
+	// argMap, _ := json.Marshal(rCmdArgs)
+	// transactionFrame.Arg = argMap
+	// transactionFrame.TxId = rCmdArgs.TxId
+	transactionFrame.ComponentId = server.SelfComponentId
+
+	instructionFrame := instructions.CreateInstructionFrame(transactionFrame, true)
+	// instructionFrame.Pk = retKeyPair.PubKey
+	instructionFrame.TxId = idgen.GenerateTxId()
+	// server.CurKeyPair = retKeyPair
+	return *instructionFrame
+}
+
+func RelayInstructionFrame(server *transport.RegisteredComponent, instruction instructions.InstructionFrame) *transport.RegisteredComponent {
+	instruction.Pk = server.CurKeyPair.PubKey
+	dataFrame, _ := json.Marshal(instruction)
+	transmitFrame, frameKeyPair := routine.PrepareTransmitFrame(dataFrame, server.CurPubKey, server.CurKeyPair.PrivKey, server.XorKey)
+	server.CurKeyPair = frameKeyPair
+	go writeToChannel(server.CmdChannel, transmitFrame)
+	boolSuccess, err := server.Transport.Send(server.CmdChannel)
+	if !boolSuccess {
+		log.Fatalln("failed to send instruction: ", err)
+	}
+	log.Println("sent instruction")
+	return server
 }
 
 func RetrieveInstruction(server *transport.RegisteredComponent) (instructions.InstructionFrame, error) {
@@ -166,27 +199,4 @@ func RetrieveInstruction(server *transport.RegisteredComponent) (instructions.In
 	// TODO: Send instruction frame to command router
 
 	return instruction, nil
-}
-
-func RequestInstruction(server *transport.RegisteredComponent) (instructions.InstructionFrame, asymmetric.AsymmetricKeyPair) {
-	var transactionFrame instructions.Transaction
-
-	transactionFrame.Cmd = "icmdr"
-	retKeyPair, err := asymmetric.GenerateKeypair()
-	if err != nil {
-		log.Println("failed to generate new keys")
-	}
-	// Don't need to use this for instruction requests
-	// var rCmdArgs reqCmdArgs
-	// rCmdArgs.Ipk = retKeyPair.PubKey
-	// rCmdArgs.TxId = idgen.GenerateTxId()
-	// argMap, _ := json.Marshal(rCmdArgs)
-	// transactionFrame.Arg = argMap
-	// transactionFrame.TxId = rCmdArgs.TxId
-	transactionFrame.ComponentId = server.SelfComponentId
-
-	instructionFrame := instructions.CreateInstructionFrame(transactionFrame, true)
-	instructionFrame.Pk = retKeyPair.PubKey
-	instructionFrame.TxId = idgen.GenerateTxId()
-	return *instructionFrame, retKeyPair
 }

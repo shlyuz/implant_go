@@ -42,7 +42,60 @@ func genComponentInfo(lpConfig []byte) component.Component {
 	return Component
 }
 
+func registerClient(Component *component.Component) transport.RegisteredComponent {
+	var client transport.RegisteredComponent
+	var err error
+	client.Transport, _, err = transport.PrepareTransport(Component, []string{})
+	if err != nil {
+		log.Fatalln("transport failed to initalize: ", err)
+	}
+
+	client.InitalKeyPair = Component.InitalKeypair
+	client.InitalPubKey = Component.Config.CryptoConfig.PeerPk // find a better way to do this
+	client.CurKeyPair = client.InitalKeyPair
+	client.CurPubKey = client.InitalPubKey
+	client.XorKey = Component.Config.CryptoConfig.XorKey
+	client.TskChkTimer = Component.Config.TskChkTimer
+	client.InitSignature = Component.Config.InitSignature
+	client.SelfComponentId = Component.ComponentId
+
+	initAckInstruction, client, boolSuccess := transaction.RetrieveInitFrame(&client)
+	if !boolSuccess {
+		log.Println("implant failed to initalize")
+		// TODO: Restart loop here
+	}
+	transaction.RelayInitFrame(&client, initAckInstruction)
+	// TODO: Client is now considered registerd
+	log.Println(client)
+
+	return client
+}
+
+func clientLoop(client *transport.RegisteredComponent) {
+	for {
+		// TODO: Do I need to recieve the client here, or does the KP update?
+		instructionRequestFrame, err := transaction.RetrieveInstructionRequest(client) // Depending if we have something in the Queue for this implant, we'll relay an instruction. This should go to a router of some srot
+		if err != nil {
+			log.Println("invalid instruction received: ")
+			log.Println("[dbginstructframe]: ", instructionRequestFrame)
+			log.Println(err)
+			time.Sleep(time.Duration(client.TskChkTimer))
+			break
+		}
+		// go transaction.RouteClientInstruction(client, instructionRequestFrame)
+		transaction.RouteClientInstruction(client, instructionRequestFrame)
+		// TODO: Teamserver interaction function
+		// serverCmd := transaction.RelayInstructionToServer
+		// serverCmd will not empty (no-op if no command), we will run transaction.GenerateForwardCmd
+		// instructionReplyFrame, clientKp := transaction.GenerateForwardCmd(client)
+		// transaction.RelayForwardCmd(client, instructionReplyFrame)
+		time.Sleep(time.Duration(client.TskChkTimer))
+		break
+	}
+}
+
 func main() {
+	var clients []transport.RegisteredComponent
 	log.SetPrefix(logging.GetLogPrefix())
 	// TODO: make this real
 	lpConfig :=
@@ -60,48 +113,27 @@ priv_key = jnbl37d67g656d617b19l6l02305g68l4d03ngn914800934511b2g13bgdg1021`)
 	Component := genComponentInfo(lpConfig)
 	// This is the start of the registration process for a client
 	// TODO: This is a loop per implant
-	var client transport.RegisteredComponent
-	var err error
-	transportWg := sync.WaitGroup{}
-	defer transportWg.Wait()
-	client.Transport, _, err = transport.PrepareTransport(&Component, []string{})
-	if err != nil {
-		log.Fatalln("transport failed to initalize: ", err)
-	}
+	// transportWg := sync.WaitGroup{}
+	// defer transportWg.Wait()
 
-	client.InitalKeyPair = Component.InitalKeypair
-	client.InitalPubKey = Component.Config.CryptoConfig.PeerPk // find a better way to do this
-	client.CurKeyPair = client.InitalKeyPair
-	client.CurPubKey = client.InitalPubKey
-	client.XorKey = Component.Config.CryptoConfig.XorKey
-	client.TskChkTimer = Component.Config.TskChkTimer
-	client.InitSignature = Component.Config.InitSignature
-	client.SelfComponentId = Component.ComponentId
+	// This client is now considered registered
+	// TODO: In a for loop for every expected client, run a goroutine, append to clients
+	// client := go registerClient(&Component)
+	client := registerClient(&Component) // TODO: Be concurrent, call runclient inside this goroutine
+	clients = append(clients, client)    // TODO: Put me inside the concurrent goroutine
 
-	// This client is now considered registe
-	initAckInstruction, client, boolSuccess := transaction.RetrieveInitFrame(&client)
-	if !boolSuccess {
-		log.Println("implant failed to initalize")
-		// TODO: Restart loop here
+	wg := sync.WaitGroup{}
+	for index, registeredClient := range clients {
+		log.Println("Registered ", index, "clients")
+		log.Println("Starting execution for ", registeredClient.Id)
+		go clientLoop(&registeredClient)
 	}
-	transaction.RelayInitFrame(&client, initAckInstruction)
-	// TODO: Client is now considered registerd
-	log.Println(client)
+	wg.Wait()
+
+	for {
+		select {}
+	} //run forever
 
 	// TODO: Implement loop here to do the actual stuff
 	//  as an LP, we are awaiting a request for a command from an implant, which is then relayed to TS, where we get a command etc
-	for {
-		instructionRequestFrame, err := transaction.RetrieveInstructionRequest(&client) // Depending if we have something in the Queue for this implant, we'll relay an instruction
-		if err != nil {
-			log.Println("invalid instruction received: ")
-			log.Println("[dbginstructframe]: ", instructionRequestFrame)
-			log.Println(err)
-			time.Sleep(time.Duration(Component.Config.TskChkTimer))
-			break
-		}
-		// TODO: Teamserver interaction function
-		// serverCmd := transaction.RelayInstructionToServer
-		time.Sleep(time.Duration(Component.Config.TskChkTimer))
-		break
-	}
 }

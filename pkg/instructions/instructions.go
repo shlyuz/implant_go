@@ -26,14 +26,15 @@ type InstructionFrame struct {
 
 type EventHist struct {
 	Timestamp   string
-	Event       string
+	Events      string
 	ComponentId string
 }
 
 type CmdOutput struct {
-	State        string
-	EventHistory EventHist
-	Ipk          asymmetric.PublicKey
+	State string
+	// EventHistory EventHist
+	Ipk    asymmetric.PublicKey
+	Output []byte
 }
 
 // Create an instruction frame from a passed data frame

