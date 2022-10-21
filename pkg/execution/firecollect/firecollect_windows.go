@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"shlyuz/pkg/component"
 	"shlyuz/pkg/execution/ipc"
 	"sync"
 )
@@ -47,7 +48,7 @@ func launchZombie(zombiePath string, namedPipe string) error {
 	return nil
 }
 
-func Execute(cmd string, zombiePath string) (string, error) {
+func Execute(cmd string, execChannels *component.ComponentExecutionChannel, zombiePath string) (string, error) {
 	var output string
 	namedPipe := ipc.CreateNamedPipe()
 	waitGroup.Add(1)

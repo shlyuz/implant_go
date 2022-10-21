@@ -14,18 +14,19 @@ import (
 )
 
 type RegisteredComponent struct {
-	InitalPubKey    asymmetric.PublicKey
-	InitalKeyPair   asymmetric.AsymmetricKeyPair
-	CurPubKey       asymmetric.PublicKey
-	CurKeyPair      asymmetric.AsymmetricKeyPair
-	Transport       TransportMethod
-	InitSignature   []byte
-	Id              string
-	XorKey          int
-	SelfComponentId string
-	CmdChannel      chan []byte
-	TskChkTimer     int
-	Manifest        component.ComponentManifest
+	InitalPubKey               asymmetric.PublicKey
+	InitalKeyPair              asymmetric.AsymmetricKeyPair
+	CurPubKey                  asymmetric.PublicKey
+	CurKeyPair                 asymmetric.AsymmetricKeyPair
+	Transport                  TransportMethod
+	InitSignature              []byte
+	Id                         string
+	XorKey                     int
+	SelfComponentId            string
+	CmdChannel                 chan []byte
+	TskChkTimer                int
+	Manifest                   component.ComponentManifest
+	ComponentExecutionChannels []*component.ComponentExecutionChannel
 }
 
 type TransportMethod interface {

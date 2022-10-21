@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"os/exec"
+	"shlyuz/pkg/component"
 	"syscall"
 )
 
@@ -15,7 +16,7 @@ import (
 //			Can open an output pipe to return additional data, but doesn't recieve data outside of execution
 //		 permits memory injection of code which is executed, possibly continuing beyond the return. No interaction is possible other than the return code
 //	 If the loader attempts to quit prior to the module’s return, the loader should not terminate until the module returns
-func ExecuteCmd(cmd string, inPipe io.Reader) (*bytes.Reader, error) {
+func ExecuteCmd(cmd string, execChannels *component.ComponentExecutionChannel, inPipe io.Reader) (*bytes.Reader, error) {
 	// https://stackoverflow.com/a/68847697
 	var b bytes.Buffer
 	command := exec.Command(cmd)

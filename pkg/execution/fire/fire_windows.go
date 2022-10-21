@@ -8,7 +8,7 @@ import (
 )
 
 // No communication, aside from what's returned from the status. Exported function MUST return when the exported function is called
-func ExecuteCmd(cmd string) error {
+func ExecuteCmd(cmd string, execChannels *component.ComponentExecutionChannel) error {
 	command := exec.Command(cmd)
 	command.SysProcAttr = &syscall.SysProcAttr{}
 	command.SysProcAttr.CmdLine = cmd

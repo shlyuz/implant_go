@@ -22,7 +22,15 @@ type Component struct {
 	CurrentKeypair     asymmetric.AsymmetricKeyPair
 	CmdProcessingQueue []byte
 	CmdDoneQueue       []byte
-	TmpChannel         chan []byte
+	TransportChannel   chan []byte
+}
+
+type ComponentExecutionChannel struct {
+	CmdId  string
+	StdOut chan string
+	StdErr chan string
+	StdIn  chan string
+	Pid    chan int
 }
 
 type ComponentManifest struct {

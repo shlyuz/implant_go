@@ -14,7 +14,7 @@ import (
 
 // Create a named pipe
 func CreateNamedPipe() string {
-	tmpDir, _ := ioutil.TempDir("", "shlyuz") // TODO: randomize me somehow
+	tmpDir, _ := ioutil.TempDir("", "shlyuz-") // TODO: randomize me somehow
 	namedPipe := filepath.Join(tmpDir, "stdout")
 
 	if err := syscall.Mkfifo(namedPipe, 0600); err != nil {
