@@ -78,6 +78,8 @@ func RouteInstruction(server *transport.RegisteredComponent, instruction instruc
 	case "rcmda": // issues a new command for the implant
 		log.Println(instruction)                // TODO: Do something with this requested command
 		execution.RouteCmd(server, instruction) // we've now registered the command in the channel, we'll pop it off the server ComponentExecutionChannels when done
+		generatedInstructionFrame := GenerateCmdOutputRelayInstruction(server, instruction.TxId)
+		server = RelayInstructionFrame(server, generatedInstructionFrame)
 	case "gcmd": // issues a request to get a specific command
 		log.Println(instruction)
 		generatedInstructionFrame := GenerateCmdOutputRelayInstruction(server, instruction.TxId)
@@ -194,7 +196,19 @@ func GenerateCmdOutputRelayInstruction(server *transport.RegisteredComponent, cm
 	// TODO: Remove slice from array (https://stackoverflow.com/a/37335777) (order isn't important, so we can do this quickly.)
 	idx := slices.IndexFunc(server.ComponentExecutionChannels, func(c *component.ComponentExecutionChannel) bool { return c.CmdId == cmdId })
 	command := server.ComponentExecutionChannels[idx]
-	parsedOutputs := []byte(`{"StdOut": "` + <-command.StdOut + `", "StdIn": "` + <-command.StdIn + `", "StdErr": "` + <-command.StdErr + `"}`)
+	parsedOutputs := []byte(`{"StdOut": "`)
+	if len(command.StdOut) > 0 {
+		parsedOutputs = append(parsedOutputs, []byte(<-command.StdOut)...)
+	}
+	parsedOutputs = append(parsedOutputs, []byte(`", "StdIn": "`)...)
+	if len(command.StdIn) > 0 {
+		parsedOutputs = append(parsedOutputs, []byte(<-command.StdIn)...)
+	}
+	parsedOutputs = append(parsedOutputs, []byte(`", "StdErr": "`)...)
+	if len(command.StdErr) > 0 {
+		parsedOutputs = append(parsedOutputs, []byte(<-command.StdErr)...)
+	}
+	parsedOutputs = append(parsedOutputs, []byte(`"}`)...)
 	jsonOutputs, err := json.Marshal(parsedOutputs)
 	if err != nil {
 		log.Println("failed to marshal outputs")

@@ -117,9 +117,11 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 }
 
 func RelayInitFrame(client *transport.RegisteredComponent, initFrame instructions.InstructionFrame) *transport.RegisteredComponent {
-
 	frameMap, _ := json.Marshal(initFrame)
+	newKeyPair, _ := asymmetric.GenerateKeypair()
+	initFrame.Pk = newKeyPair.PubKey
 	transmitFrame, _ := routine.PrepareSealedFrame(frameMap, client.CurPubKey, client.XorKey, client.InitSignature)
+	client.CurKeyPair = newKeyPair
 	client.CmdChannel = make(chan []byte)
 	go writeToChannel(client.CmdChannel, transmitFrame)
 	boolSuccess, err := client.Transport.Send(client.CmdChannel)
@@ -173,6 +175,10 @@ func RetrieveInitFrame(client *transport.RegisteredComponent) (instructions.Inst
 	ackTransaction.ComponentId = client.SelfComponentId
 	ackTransaction.TxId = implantInitInstruction.TxId
 	ackInstruction = *instructions.CreateInstructionFrame(ackTransaction, false)
+	// client.CurKeyPair, err = asymmetric.GenerateKeypair()
+	// if err != nil {
+	// 	log.Println("failed to rotate keys: ", err)
+	// }
 	ackInstruction.Pk = client.CurKeyPair.PubKey
 	return ackInstruction, *client, true
 }
@@ -209,13 +215,14 @@ func GenerateForwardCmd(client *transport.RegisteredComponent) instructions.Inst
 	// TODO: We would already have a txid from the server here, but since that doesn't exist yet, we'll let CreateInstructionFrame generate one
 	// outputTransaction.TxId = receivedTxID
 	// outputTransaction.Arg = receivedArgsFromInputTransaction // we already have this
-	outputTransaction.Arg = []byte(`{"Cmd": 1, "ComponentId": "` + client.Id + `", "Args": "echo, ayyyyylmao, >, ~/shlyuz_was_here"}`)
+	outputTransaction.Arg = []byte(`{"Cmd": 1, "ComponentId": "` + client.Id + `", "Args": {"Type": "Shell", "Args": "echo ayyyyylmao shlyuz_was_here"}}`)
 	forwardCmdInstructionFrame := instructions.CreateInstructionFrame(outputTransaction, false)
 	forwardCmdInstructionFrame.Pk = client.CurKeyPair.PubKey
 	return *forwardCmdInstructionFrame
 }
 
 func RelayForwardCmd(client *transport.RegisteredComponent, forwardCmdInstruction instructions.InstructionFrame) {
+	forwardCmdInstruction.Pk = client.CurKeyPair.PubKey
 	dataFrame, _ := json.Marshal(forwardCmdInstruction)
 	transmitFrame, frameKeyPair := routine.PrepareTransmitFrame(dataFrame, client.CurPubKey, client.CurKeyPair.PrivKey, client.XorKey)
 	client.CurKeyPair = frameKeyPair

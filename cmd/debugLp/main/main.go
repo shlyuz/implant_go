@@ -88,7 +88,7 @@ func clientLoop(client *transport.RegisteredComponent) {
 		// instructionReplyFrame, clientKp := transaction.GenerateForwardCmd(client)
 		// transaction.RelayForwardCmd(client, instructionReplyFrame)
 		time.Sleep(time.Duration(client.TskChkTimer))
-		break
+		// break
 	}
 }
 

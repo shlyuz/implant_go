@@ -109,7 +109,7 @@ func run(server *transport.RegisteredComponent) {
 		// TODO: Process instruction
 		transaction.RouteInstruction(server, instructionFrame)
 		time.Sleep(time.Duration(server.TskChkTimer))
-		break
+		// break
 	}
 
 }

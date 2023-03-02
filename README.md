@@ -25,7 +25,7 @@ Don't use this yet, it's not ready.
 # Building
 This project makes extensive use of go build tags and [VSCode](https://vscodium.com/). If you import the root of this project into VSCode or VSCodium, you will have an identical development environment.
 
-Tasks have been provided that change your [.vscode/settings.json](https://github.com/shlyuz/implant_go/blob/master/.vscode/settings.json) to eanble you to quickly switch VSCode's context between the component you are developing for. 
+Tasks have been provided that change your [.vscode/settings.json](https://github.com/shlyuz/implant_go/blob/master/.vscode/settings.json) to enable you to quickly switch VSCode's context between the component you are developing for. 
 
 ## Implant
 First, run the task `Set VSCode to Implant Environment (overwrites settings.json)`

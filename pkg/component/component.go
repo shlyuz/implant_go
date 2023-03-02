@@ -40,6 +40,11 @@ type ComponentManifest struct {
 	Arch     string
 }
 
+type Command struct {
+	Type string
+	Args string
+}
+
 func Rekey(frame instructions.Transaction, component Component) (Component, []byte, asymmetric.AsymmetricKeyPair) {
 	rawRekeyFrame := instructions.CreateInstructionFrame(frame, true)
 	rawFrameBytes := new(bytes.Buffer)

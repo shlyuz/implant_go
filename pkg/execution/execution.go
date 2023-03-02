@@ -12,7 +12,7 @@ import (
 type cmdArgs struct {
 	Cmd         int // 1=f, 2=ff, 3=fc, 3=fi
 	ComponentId string
-	Args        string
+	Args        component.Command
 }
 
 func makeExecutionChannels(instruction instructions.InstructionFrame) component.ComponentExecutionChannel {
@@ -31,7 +31,7 @@ func RouteCmd(client *transport.RegisteredComponent, instruction instructions.In
 	var parsedCmd cmdArgs
 	err := json.Unmarshal([]byte(instruction.CmdArgs), &parsedCmd)
 	if err != nil {
-		log.Println("unable to unmarshal parsed cmd")
+		log.Println("unable to unmarshal parsed cmd: ", err)
 	}
 
 	execChannel := makeExecutionChannels(instruction)
@@ -39,6 +39,8 @@ func RouteCmd(client *transport.RegisteredComponent, instruction instructions.In
 
 	switch cmd := parsedCmd.Cmd; cmd {
 	case 1:
-		fire.ExecuteCmd(string(parsedCmd.Args), &execChannel)
+		fire.ExecuteCmd(parsedCmd.Args, &execChannel)
 	}
+
+	// TODO: Return Execution channels and generate an output (fcmd) instruction
 }

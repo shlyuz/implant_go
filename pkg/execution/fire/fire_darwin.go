@@ -7,30 +7,34 @@ import (
 	"log"
 	"os/exec"
 	"shlyuz/pkg/component"
+	"strings"
 )
 
-func ExecuteCmd(cmd string, execChannels *component.ComponentExecutionChannel) {
-	command := exec.Command(cmd)
-	cmdOutReader, _ := command.StdoutPipe()
-	// cmdErrReader, _ := command.StderrPipe()
-	// cmdInReader, _ := command.StdinPipe()
+func ExecuteCmd(cmd component.Command, execChannels *component.ComponentExecutionChannel) {
+	if cmd.Type == "Shell" {
+		cmdSlice := strings.Split(cmd.Args, " ")
+		command := exec.Command(cmdSlice[0], cmdSlice[1:]...)
 
-	outScanner := bufio.NewScanner(cmdOutReader)
-	go reader(outScanner, execChannels.StdOut)
+		cmdOutReader, _ := command.StdoutPipe()
+		// cmdErrReader, _ := command.StderrPipe()
+		// cmdInReader, _ := command.StdinPipe()
 
-	go func() {
-		value := <-execChannels.StdOut
-		println(value)
-		execChannels.Pid <- command.Process.Pid
-	}()
+		outScanner := bufio.NewScanner(cmdOutReader)
+		go reader(outScanner, execChannels.StdOut)
 
-	_ = command.Run()
+		go func() {
+			value := <-execChannels.StdOut
+			println(value)
+			execChannels.Pid <- command.Process.Pid
+		}()
 
-	err := command.Run()
-	if err != nil {
-		log.Println("encountered error while executing ", execChannels.CmdId)
-		execChannels.StdErr <- err.Error()
+		err := command.Run()
+		if err != nil {
+			log.Println("encountered error while executing ", execChannels.CmdId)
+			execChannels.StdErr <- err.Error()
+		}
 	}
+
 }
 
 func reader(scanner *bufio.Scanner, out chan string) {
