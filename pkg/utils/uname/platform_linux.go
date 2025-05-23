@@ -18,7 +18,7 @@ type PlatformInfo struct {
 	Uname Uname
 }
 
-func byte256ToStr(arr [256]byte) string {
+func byte65ToStr(arr [65]byte) string {
 	b := make([]byte, 0, len(arr))
 	for _, v := range arr {
 		if v == 0 {
@@ -43,12 +43,12 @@ func platinfo() Uname {
 		//  Machine    [265]byte
 		//  Domainname [265]byte
 		// }
-		platUname.Sysname = byte256ToStr(uname.Sysname)
-		platUname.Version = byte256ToStr(uname.Version)
-		platUname.Nodename = byte256ToStr(uname.Nodename)
-		platUname.Release = byte256ToStr(uname.Release)
-		platUname.Machine = byte256ToStr(uname.Machine)
-		platUname.Domainname = byte256ToStr(uname.Domainname)
+		platUname.Sysname = byte65ToStr(uname.Sysname)
+		platUname.Version = byte65ToStr(uname.Version)
+		platUname.Nodename = byte65ToStr(uname.Nodename)
+		platUname.Release = byte65ToStr(uname.Release)
+		platUname.Machine = byte65ToStr(uname.Machine)
+		platUname.Domainname = byte65ToStr(uname.Domainname)
 	}
 	return *platUname
 }

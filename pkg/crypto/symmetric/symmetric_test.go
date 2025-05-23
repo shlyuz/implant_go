@@ -5,105 +5,144 @@ import (
 	"testing"
 )
 
-var tests = []struct {
-	message []byte
-}{
-	{
-		[]byte("sub 16 len str"),
-	},
-	{
-		[]byte("16 len str xxxxx"),
-	},
-	{
-		[]byte("Sub 32 len string, but > 16"),
-	},
-	{
-		[]byte("32 length string is placed here."),
-	},
-	{
-		[]byte("string len >32 but also less than 48"),
-	},
-	{
-		[]byte("string len >48, and is also mod % 4, so no padding"),
-	},
-	{
-		[]byte("okay this string should be split up into exactly 4 chunks no pad"),
-	},
-	{
-		[]byte("Finally this is going to be a very long string over 64 bytes in length, with padding."),
-	},
-	{
-		// Nop Sled
-		[]byte{144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144},
-	},
-	{
-		// INT3 Sled
-		[]byte{204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204},
-	},
-	{
-		// CRLF Sled
-		[]byte{10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13, 10, 13},
-	},
-	{
-		// LF Sled
-		[]byte{13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13},
-	},
-	{
-		// Null Sled
-		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	},
-}
+func TestEncryptDecryptSuccess(t *testing.T) {
+	plaintexts := [][]byte{
+		[]byte(""),
+		[]byte("test"),
+		[]byte("16bytestring----"), // 16 bytes
+		[]byte("This is a longer test message for RC6-CBC."),
+	}
 
-type TestMessageType interface {
-	getMessageStruct() SymmetricMessage
-}
-
-func (s SymmetricMessage) getMessageStruct() SymmetricMessage {
-	return s
-}
-
-func attemptEncryption(MessageToEncrypt []byte) SymmetricMessage {
-	return Encrypt(MessageToEncrypt)
-}
-
-func attemptDecryption(msg TestMessageType) SymmetricMessage {
-	encryptedMsg := msg.getMessageStruct()
-	return Decrypt(encryptedMsg.Message, encryptedMsg.Key)
-}
-
-func TestSymmetricRc6EncryptionAndDecryption(t *testing.T) {
-	t.Parallel()
-	for _, testcase := range tests {
-		EncryptionTestMessageBytes := make([]byte, len(testcase.message))
-		copy(EncryptionTestMessageBytes, testcase.message)
-		if !bytes.Equal(EncryptionTestMessageBytes, testcase.message) {
-			t.Log("Setting the plaintext message failed")
-			t.Errorf("%s != %s", EncryptionTestMessageBytes, testcase.message)
+	for _, pt :=  range plaintexts {
+		encryptedMsg := Encrypt(pt)
+		if !encryptedMsg.IsEncrypted {
+			t.Errorf("Encrypt(%q) did not set IsEncrypted to true", pt)
+			continue
 		}
-		SymmetricEncryptionTestCase := attemptEncryption(EncryptionTestMessageBytes)
-
-		if bytes.Equal(SymmetricEncryptionTestCase.Message, testcase.message) {
-			t.Log("[FAIL] Encryption attempt failed")
-			t.Log("Generated key for encryption testcase: ", SymmetricEncryptionTestCase.Key)
-			t.Log("IsEncrypted value: ", SymmetricEncryptionTestCase.IsEncrypted)
-			t.Error("Testcase: ", testcase.message)
-		} else {
-			t.Log("[PASS] Encryption for Testcase: ", string(testcase.message))
+		if len(encryptedMsg.Key) != 32 {
+			t.Errorf("Encrypt(%q) did not generate a 32-byte key, got %d bytes", pt, len(encryptedMsg.Key))
+			continue
 		}
 
-		SymmetricEncryptionTestCase = SymmetricEncryptionTestCase.getMessageStruct()
-		SymmetricEncryptionTestCase = attemptDecryption(SymmetricEncryptionTestCase)
-
-		if !bytes.Equal(SymmetricEncryptionTestCase.Message, testcase.message) {
-			t.Log("[FAIL] Decryption attempt failed")
-			t.Log("Retrieved key for decryption testcase: ", SymmetricEncryptionTestCase.Key)
-			t.Log("IsEncrypted value: ", SymmetricEncryptionTestCase.IsEncrypted)
-			t.Log("Equal?: ", bytes.Equal(SymmetricEncryptionTestCase.Message, testcase.message))
-			t.Log("Decrypted message: ", SymmetricEncryptionTestCase.Message)
-			t.Error("Testcase: ", string(testcase.message))
-		} else {
-			t.Log("[PASS] Decryption for Testcase: ", string(testcase.message))
+		decryptedMsg := Decrypt(encryptedMsg.Message, encryptedMsg.Key)
+		if decryptedMsg.IsEncrypted {
+			t.Errorf("Decrypt(Encrypt(%q)) failed, IsEncrypted is true", pt)
+			continue
+		}
+		if !bytes.Equal(decryptedMsg.Message, pt) {
+			t.Errorf("Decrypt(Encrypt(%q)) = %q, want %q", pt, decryptedMsg.Message, pt)
 		}
 	}
-	t.Log("[PASS]")
+}
+
+func TestHMACIntegrityTamperedIV(t *testing.T) {
+	plaintext := []byte("test message for HMAC integrity")
+	encryptedMsg := Encrypt(plaintext)
+	if !encryptedMsg.IsEncrypted {
+		t.Fatalf("Initial encryption failed")
+	}
+
+	// Tamper with IV (first 16 bytes)
+	tamperedMessage := make([]byte, len(encryptedMsg.Message))
+	copy(tamperedMessage, encryptedMsg.Message)
+	if len(tamperedMessage) >= 16 { // Ensure message is long enough for IV
+		tamperedMessage[0] ^= 0x01 // Flip the first bit of the IV
+	} else {
+		t.Fatalf("Encrypted message is too short (%d bytes) to tamper with IV", len(tamperedMessage))
+	}
+
+
+	decryptedMsg := Decrypt(tamperedMessage, encryptedMsg.Key)
+	if !decryptedMsg.IsEncrypted {
+		t.Errorf("Decryption succeeded with tampered IV, but should have failed.")
+	}
+}
+
+func TestHMACIntegrityTamperedCiphertext(t *testing.T) {
+	plaintext := []byte("test message for HMAC integrity")
+	encryptedMsg := Encrypt(plaintext)
+	if !encryptedMsg.IsEncrypted {
+		t.Fatalf("Initial encryption failed")
+	}
+
+	// Tamper with Ciphertext (bytes between IV and HMAC)
+	// IV is 16 bytes, HMAC is 32 bytes
+	if len(encryptedMsg.Message) < 16+1+32 { // Ensure there's at least 1 byte of ciphertext
+		t.Fatalf("Encrypted message is too short to contain ciphertext for tampering: len %d. Needs to be at least %d", len(encryptedMsg.Message), 16+1+32)
+	}
+	tamperedMessage := make([]byte, len(encryptedMsg.Message))
+	copy(tamperedMessage, encryptedMsg.Message)
+	tamperedMessage[16] ^= 0x01 // Flip the first bit of the ciphertext part
+
+	decryptedMsg := Decrypt(tamperedMessage, encryptedMsg.Key)
+	if !decryptedMsg.IsEncrypted {
+		t.Errorf("Decryption succeeded with tampered ciphertext, but should have failed.")
+	}
+}
+
+func TestHMACIntegrityTamperedHMAC(t *testing.T) {
+	plaintext := []byte("test message for HMAC integrity")
+	encryptedMsg := Encrypt(plaintext)
+	if !encryptedMsg.IsEncrypted {
+		t.Fatalf("Initial encryption failed")
+	}
+
+	// Tamper with HMAC (last 32 bytes)
+	if len(encryptedMsg.Message) < 32 {
+		t.Fatalf("Encrypted message is too short (%d bytes) to tamper with HMAC", len(encryptedMsg.Message))
+	}
+	tamperedMessage := make([]byte, len(encryptedMsg.Message))
+	copy(tamperedMessage, encryptedMsg.Message)
+	tamperedMessage[len(tamperedMessage)-1] ^= 0x01 // Flip the last bit of the HMAC
+
+	decryptedMsg := Decrypt(tamperedMessage, encryptedMsg.Key)
+	if !decryptedMsg.IsEncrypted {
+		t.Errorf("Decryption succeeded with tampered HMAC, but should have failed.")
+	}
+}
+
+func TestDecryptWrongKey(t *testing.T) {
+	plaintext := []byte("test message for wrong key")
+	encryptedMsg := Encrypt(plaintext)
+	if !encryptedMsg.IsEncrypted {
+		t.Fatalf("Initial encryption failed")
+	}
+
+	wrongKey := generateKey() // Generate a different key
+	// Ensure keys are actually different, highly improbable they are the same
+	if bytes.Equal(encryptedMsg.Key, wrongKey) {
+		t.Log("Warning: Generated wrong key is identical to original key. Retrying.")
+		wrongKey = generateKey()
+		if bytes.Equal(encryptedMsg.Key, wrongKey) {
+			t.Fatalf("Failed to generate a different key for TestDecryptWrongKey")
+		}
+	}
+
+
+	decryptedMsg := Decrypt(encryptedMsg.Message, wrongKey)
+	if !decryptedMsg.IsEncrypted {
+		t.Errorf("Decryption succeeded with wrong key, but should have failed.")
+	}
+}
+
+func TestDecryptTooShort(t *testing.T) {
+	key := generateKey()
+	// Minimum valid length: IV (16) + 1 block Ciphertext (16) + HMAC (32) = 64 bytes
+	shortMessages := [][]byte{
+		make([]byte, 0),    // Empty
+		make([]byte, 10),   // Less than IV
+		make([]byte, 15),   // Less than IV
+		make([]byte, 16),   // IV only, no ciphertext, no HMAC
+		make([]byte, 32),   // IV + 16B (could be Ciphertext or HMAC part, but not both + missing one)
+		make([]byte, 47),   // IV + HMAC (no ciphertext) OR IV + 16B CT + partial HMAC
+		make([]byte, 48),   // IV + HMAC (no ciphertext) OR IV + 16B CT + partial HMAC
+		make([]byte, 63),   // Just under minimum valid (IV+CipherBlock+HMAC = 16+16+32=64)
+	}
+
+	for i, msg := range shortMessages {
+		decryptedMsg := Decrypt(msg, key)
+		if !decryptedMsg.IsEncrypted {
+			t.Errorf("Test %d: Decryption succeeded with too short message (len %d), but should have failed.", i, len(msg))
+		}
+	}
 }

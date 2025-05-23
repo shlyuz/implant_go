@@ -1,4 +1,4 @@
-package routine
+package crypto
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ type EncryptedFrame struct {
 	Chunk_len int
 }
 
-func PrepareSealedFrame(dataFrame []byte, peerPubKey asymmetric.PublicKey, xorKey int, initSig []byte) ([]byte, asymmetric.AsymmetricKeyPair) {
+func PrepareSealedFrame(dataFrame []byte, peerPubKey asymmetric.PublicKey, xorKey int, initSig []byte) []byte {
 	log.SetPrefix(logging.GetLogPrefix())
 	symMsg := symmetric.Encrypt(dataFrame)
 
@@ -35,24 +35,26 @@ func PrepareSealedFrame(dataFrame []byte, peerPubKey asymmetric.PublicKey, xorKe
 	xorHexChunkFrame := xor.XorMessage(hexChunkFrame, xorKey)
 
 	hexKey := make([]byte, hex.EncodedLen(len(symMsg.Key)))
-	hex.Encode(hexKey, symMsg.Key)
+	hex.Encode(hexKey, symMsg.Key) // symMsg.Key is 32 bytes, hexKey is 64 bytes
 	hexedHexKey := make([]byte, hex.EncodedLen(len(hexKey)))
-	hex.Encode(hexedHexKey, hexKey)
+	hex.Encode(hexedHexKey, hexKey) // hexKey is 64 bytes, hexedHexKey is 128 bytes
 
 	chunkMsg := make([]byte, len(hexedHexKey)+len(xorHexChunkFrame))
 	copy(chunkMsg[:], hexedHexKey)
 	copy(chunkMsg[len(hexedHexKey):], xorHexChunkFrame)
 
+	// symMsg.Key is 32 bytes
 	preparedChunkFrame := make([]byte, len(symMsg.Key)+len(chunkMsg))
 	copy(preparedChunkFrame[:], symMsg.Key)
 	copy(preparedChunkFrame[len(symMsg.Key):], chunkMsg)
 
 	hexedXorHexChunkFrame := shlyuzHex.Encode(preparedChunkFrame)
 
-	ImpKeyPair, err := asymmetric.GenerateKeypair()
-	if err != nil {
-		log.Println("Unable to generate key pair")
-	}
+	// ImpKeyPair generation removed.
+	// ImpKeyPair, err := asymmetric.GenerateKeypair()
+	// if err != nil {
+	// 	log.Println("Unable to generate key pair")
+	// }
 
 	encBox := new(asymmetric.AsymmetricBox)
 	*encBox = asymmetric.EncryptSealed(hexedXorHexChunkFrame, peerPubKey)
@@ -63,11 +65,11 @@ func PrepareSealedFrame(dataFrame []byte, peerPubKey asymmetric.PublicKey, xorKe
 	initMsg := make([]byte, len(initSig)+len(retMsg))
 	copy(initMsg[:len(initSig)], initSig) // prepend the init signature
 	copy(initMsg[len(initSig):], retMsg)
-
-	return initMsg, ImpKeyPair
+	// Ensure ImpKeyPair is not generated and only initMsg is returned
+	return initMsg
 }
 
-func PrepareTransmitFrame(dataFrame []byte, peerPubKey asymmetric.PublicKey, myPrivKey asymmetric.PrivateKey, xorKey int) ([]byte, asymmetric.AsymmetricKeyPair) {
+func PrepareTransmitFrame(dataFrame []byte, peerPubKey asymmetric.PublicKey, myPrivKey asymmetric.PrivateKey, xorKey int) []byte {
 	log.SetPrefix(logging.GetLogPrefix())
 	symMsg := symmetric.Encrypt(dataFrame)
 
@@ -102,12 +104,7 @@ func PrepareTransmitFrame(dataFrame []byte, peerPubKey asymmetric.PublicKey, myP
 	retMsg := make([]byte, len(encBox.Message)+len(encBox.IV))
 	copy(retMsg[:], encBox.IV[:])
 	copy(retMsg[len(encBox.IV):], encBox.Message)
-	ImpKeyPair, err := asymmetric.GenerateKeypair()
-	if err != nil {
-		log.Println("Unable to generate key pair")
-	}
-
-	return retMsg, ImpKeyPair
+	return retMsg
 }
 
 func UnwrapTransmitFrame(transmitFrame []byte, peerPubKey asymmetric.PublicKey, myPrivKey asymmetric.PrivateKey, xorKey int) []byte {
@@ -120,11 +117,11 @@ func UnwrapTransmitFrame(transmitFrame []byte, peerPubKey asymmetric.PublicKey, 
 		log.Println("invalidmyPrivKey transmit frame")
 	}
 	unhexedMsg := shlyuzHex.Decode(decBox.Message)
-	symKey := unhexedMsg[0:16]
+	symKey := unhexedMsg[0:32]
 
 	unxorFrame := xor.XorMessage(unhexedMsg[len(symKey):], xorKey) // appendedHexChunkFrame
-	// nextSymKey := unxorFrame[:64]
-	uncFrame := shlyuzHex.Decode(unxorFrame[64:]) // this is chunkFrame
+	// nextSymKey := unxorFrame[:128]
+	uncFrame := shlyuzHex.Decode(unxorFrame[128:]) // this is chunkFrame
 
 	var chunks EncryptedFrame
 	json.Unmarshal(uncFrame, &chunks)
@@ -162,10 +159,10 @@ func UnwrapSealedFrame(transmitFrame []byte, myPrivKey asymmetric.PrivateKey, my
 		log.Println("invalidmyPrivKey transmit frame")
 	}
 	unhexedMsg := shlyuzHex.Decode(decBox.Message)
-	symKey := unhexedMsg[0:16]
+	symKey := unhexedMsg[0:32]
 	unxorFrame := xor.XorMessage(unhexedMsg[len(symKey):], xorKey)
-	// nextSymKey := unxorFrame[:64]
-	uncFrame := shlyuzHex.Decode(unxorFrame[64:]) // this is chunkFrame
+	// nextSymKey := unxorFrame[:128]
+	uncFrame := shlyuzHex.Decode(unxorFrame[128:]) // this is chunkFrame
 
 	var chunks EncryptedFrame
 	json.Unmarshal(uncFrame, &chunks)
