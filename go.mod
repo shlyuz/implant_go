@@ -3,6 +3,7 @@ module shlyuz
 go 1.19
 
 require (
+	github.com/BurntSushi/toml v1.5.0
 	github.com/google/uuid v1.3.0
 	golang.org/x/crypto v0.1.0
 	golang.org/x/exp v0.0.0-20221019170559-20944726eadf

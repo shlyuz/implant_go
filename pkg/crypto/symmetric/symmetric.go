@@ -2,7 +2,10 @@ package symmetric
 
 import (
 	"bytes"
+	"crypto/hmac"
 	rand "crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 
 	rc6 "shlyuz/pkg/crypto/rc6"
 )
@@ -14,7 +17,7 @@ type SymmetricMessage struct {
 }
 
 func generateKey() []byte {
-	key := make([]byte, 16)
+	key := make([]byte, 32)
 	rand.Read(key)
 	return key
 }
@@ -48,39 +51,38 @@ func unpad(message []byte) []byte {
 // @param plaintext: A plaintext byte array with the message to be encrypted
 func Encrypt(plaintext []byte) SymmetricMessage {
 	var EncryptedMessage SymmetricMessage
-	var paddedPlaintext []byte
-	var paddedChunk []byte
-
-	if (len(plaintext) < 16) || (len(plaintext)%4 != 0) {
-		paddedPlaintext = pad(plaintext)
-		// copy(paddedPlaintext, pad(plaintext))
-	} else {
-		paddedPlaintext = plaintext
-		// copy(paddedPlaintext, plaintext)
-	}
-
 	EncryptedMessage.Key = generateKey()
+	rc6Key := EncryptedMessage.Key[:16]
+	hmacKey := EncryptedMessage.Key[16:]
 
-	cipher := rc6.NewCipher(EncryptedMessage.Key)
+	// Generate IV
+	iv := make([]byte, 16)
+	rand.Read(iv)
 
-	// Chunking logic, appends to EncryptedMessage.Message every 16 bytes
-	//   APPEND to EncryptedMessage.Message since this library won't loop for you. Loop across every 16 bytes of paddedPlaintext (paddedChunk)
-	for i := 0; i < len(paddedPlaintext); i = i + 16 {
-		j := 0
-		if (len(paddedPlaintext) != 16 || len(paddedPlaintext) > 16) && i > len(paddedPlaintext) {
-			j = i + 16
-			paddedChunk = paddedPlaintext[i-16 : j+(len(paddedPlaintext)-i)]
-			cipher.Encrypt(paddedChunk, paddedPlaintext[i:j])
-		} else if i+16 > len(paddedPlaintext) {
-			paddedChunk = pad(paddedPlaintext[i:])
-			cipher.Encrypt(paddedChunk, paddedChunk)
-		} else {
-			j = i + 16
-			paddedChunk = paddedPlaintext[i:j]
-			cipher.Encrypt(paddedChunk, paddedPlaintext[i:j])
+	paddedPlaintext := pad(plaintext)
+	ciphertext := make([]byte, len(paddedPlaintext))
+	cipher := rc6.NewCipher(rc6Key)
+	prevCiphertextBlock := iv
+
+	for i := 0; i < len(paddedPlaintext); i += 16 {
+		block := paddedPlaintext[i : i+16]
+		xorBlock := make([]byte, 16)
+		for j := 0; j < 16; j++ {
+			xorBlock[j] = block[j] ^ prevCiphertextBlock[j]
 		}
-		EncryptedMessage.Message = append(EncryptedMessage.Message[:], paddedChunk[:]...)
+		encryptedBlock := make([]byte, 16)
+		cipher.Encrypt(encryptedBlock, xorBlock)
+		copy(ciphertext[i:i+16], encryptedBlock)
+		prevCiphertextBlock = encryptedBlock
 	}
+
+	// Calculate HMAC
+	dataToMac := append(iv, ciphertext...)
+	mac := hmac.New(sha256.New, hmacKey)
+	mac.Write(dataToMac)
+	hmacValue := mac.Sum(nil)
+
+	EncryptedMessage.Message = append(append(iv, ciphertext...), hmacValue...)
 	EncryptedMessage.IsEncrypted = true
 
 	return EncryptedMessage
@@ -89,36 +91,65 @@ func Encrypt(plaintext []byte) SymmetricMessage {
 // Decrypts a message, given an encrypted text and a decryption key. Returns a SymmetricMessage on error or success. SymmetricMessage.IsEncrypted will be true upong failure.
 //
 // @param encryptedText: A [][byte of RC6 encrypted text to decrypt
-// @param decryptionKey: A [16]byte key to be used for decryption
+// @param decryptionKey: A [32]byte key to be used for decryption
 func Decrypt(encryptedText []byte, decryptionKey []byte) SymmetricMessage {
 	var DecryptedMessage SymmetricMessage
-	var unpaddedText []byte
-	var unpaddedChunk []byte
+	DecryptedMessage.Key = decryptionKey
+	DecryptedMessage.IsEncrypted = true // Default to true, set to false on success
 
-	if len(decryptionKey) != 16 {
-		DecryptedMessage.Key = decryptionKey
-		DecryptedMessage.Message = encryptedText
-		DecryptedMessage.IsEncrypted = true
+	if len(decryptionKey) != 32 {
+		DecryptedMessage.Message = encryptedText // Or some error message
 		return DecryptedMessage
 	}
-	DecryptedMessage.Key = decryptionKey
-	cipher := rc6.NewCipher(decryptionKey)
 
-	if (len(encryptedText) < 16) || (len(encryptedText)%4 != 0) {
-		unpaddedText = unpad(encryptedText)
-	} else {
-		unpaddedText = encryptedText
+	rc6Key := decryptionKey[:16]
+	hmacKey := decryptionKey[16:]
+
+	// Minimum length: IV (16) + 1 block Ciphertext (16) + HMAC (32) = 64
+	if len(encryptedText) < 64 {
+		DecryptedMessage.Message = encryptedText // Or some error message indicating too short
+		return DecryptedMessage
 	}
-	// Chunking logic, appends to EncryptedMessage.Message every 16 bytes
-	//   APPEND to EncryptedMessage.Message since this library won't loop for you. Loop across every 16 bytes of paddedPlaintext (paddedChunk)
-	for i := 0; i < len(unpaddedText); i = i + 16 {
-		j := i + 16
-		unpaddedChunk = unpaddedText[i:j]
-		cipher.Decrypt(unpaddedChunk, unpaddedText[i:j])
-		DecryptedMessage.Message = append(DecryptedMessage.Message[:], unpaddedChunk[:]...)
+
+	iv := encryptedText[:16]
+	hmacValue := encryptedText[len(encryptedText)-32:]
+	ciphertext := encryptedText[16 : len(encryptedText)-32]
+
+	if len(ciphertext)%16 != 0 {
+		// Ciphertext must be a multiple of block size
+		DecryptedMessage.Message = encryptedText // Or some error
+		return DecryptedMessage
 	}
-	//   APPEND to DecryptedMessage.Message since this library won't loop for you. You need to loop across every 16 bytes of plaintext
-	DecryptedMessage.Message = unpad(DecryptedMessage.Message)
+
+	// Verify HMAC
+	mac := hmac.New(sha256.New, hmacKey)
+	mac.Write(append(iv, ciphertext...))
+	expectedMAC := mac.Sum(nil)
+
+	if subtle.ConstantTimeCompare(hmacValue, expectedMAC) != 1 {
+		DecryptedMessage.Message = encryptedText // Or some error message
+		return DecryptedMessage
+	}
+
+	// CBC Decryption
+	decryptedPaddedPlaintext := make([]byte, len(ciphertext))
+	cipher := rc6.NewCipher(rc6Key)
+	prevCiphertextBlock := iv
+
+	for i := 0; i < len(ciphertext); i += 16 {
+		block := ciphertext[i : i+16]
+		decryptedBlock := make([]byte, 16)
+		cipher.Decrypt(decryptedBlock, block)
+
+		xorBlock := make([]byte, 16)
+		for j := 0; j < 16; j++ {
+			xorBlock[j] = decryptedBlock[j] ^ prevCiphertextBlock[j]
+		}
+		copy(decryptedPaddedPlaintext[i:i+16], xorBlock)
+		prevCiphertextBlock = block
+	}
+
+	DecryptedMessage.Message = unpad(decryptedPaddedPlaintext)
 	DecryptedMessage.IsEncrypted = false
 
 	return DecryptedMessage
